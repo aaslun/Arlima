@@ -974,11 +974,18 @@ class Arlima_Plugin
      */
     public static function publishScheduledList($list_id, $version_id)
     {
-        $list_factory = new Arlima_ListFactory();
-        $list = $list_factory->loadList($list_id, $version_id);
-        $list_factory->deleteListVersion($version_id); // Delete the old scheduled list version
-        $version = $list->getVersion();
-        $list_factory->saveNewListVersion($list, $list->getArticles(), $version['user_id'], 0); // Publish the list as a new version
+        $ver_repo = new Arlima_ListVersionRepository();
+        $list = Arlima_List::builder()
+                        ->id($list_id)
+                        ->version($version_id)
+                        ->includeFutureArticles()
+                        ->build();
+
+        if( $list->numArticles() > 0 ) {
+            // No articles would mean that the version did not exist (todo: how should one detect that a requested version does not exist)
+            $ver_repo->delete($version_id);
+            $ver_repo->create($list, $list->getArticles(), $list->getVersionAttribute('user_id')); // Publish the list as a new version
+        }
     }
 
 }
