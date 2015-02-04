@@ -935,7 +935,7 @@ class Arlima_Plugin
         $attachment = array(
             'post_mime_type' => $type,
             'guid' => $local_url,
-            'post_parent' => $connected_post,
+            'post_parent' => 0,
             'post_title' => $title,
             'post_content' => '',
         );
@@ -945,6 +945,7 @@ class Arlima_Plugin
 
         if( !is_wp_error($id) ) {
             wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $file ) );
+            set_post_thumbnail($connected_post, $id);
             return $id;
         } else {
             /* @var WP_Error $id */
