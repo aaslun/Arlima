@@ -9,6 +9,9 @@
     margin:10px auto 0;
     cursor: default;
     overflow: auto;
+    font-family: Helvetica, sans-serif;
+    font-weight: normal;
+    font-size: 15px;
 }
 
     .tmpl-article.first-in-list,
@@ -27,6 +30,7 @@
     margin: 0;
     padding: 0;
     border:0;
+    overflow: auto;
 }
 
 .tmpl-article.img-full {
@@ -47,17 +51,21 @@
 
 
 /* links */
-.tmpl-article a {
+.tmpl-article a:link,
+.tmpl-article a:visited,
+.tmpl-article a:hover,
+.tmpl-article a:active {
     text-decoration: none;
     color:#333;
     cursor: pointer;
+    border-bottom: 0;
 }
 
 .tmpl-article h4,
 .tmpl-article h3,
 .tmpl-article h2,
 .tmpl-article h1 {
-    font-family: Verdana, Arial, sans-serif;
+    font-family: Tahoma, Helvetica, sans-serif;
     padding: 0 0 8px;
     margin: 0;
     line-height: 110%;
@@ -186,11 +194,12 @@ a.teaser-entryword:hover {
 
 .teaser-children {
     overflow: auto;
+    padding-top: 10px;
 }
 
 .teaser-children .tmpl-article,
 body.arlima-preview .teaser-children .tmpl-article {
-    padding: 10px 0 0;
+    padding: 0;
     border: 0;
     overflow: visible;
     margin-bottom: 18px;
@@ -203,15 +212,29 @@ body.arlima-preview .teaser-children .tmpl-article {
     overflow: auto;
 }
 
-.teaser-children .tmpl-article.teaser-split.first,
-.teaser-children .tmpl-article.teaser-split.last {
+.teaser-children .child-wrapper {
+    overflow: hidden;
+}
+
+.teaser-children .tmpl-article.teaser-split,
+body.arlima-preview .teaser-children .tmpl-article.teaser-split {
     float: left;
     width: 48% !important;
     clear: none;
+    margin-right: 1%;
+}
+
+.teaser-children .child-wrapper-3 .tmpl-article.teaser-split {
+    width: 32% !important;
+}
+
+.teaser-children .child-wrapper-4 .tmpl-article.teaser-split {
+    width: 24% !important;
 }
 
 .teaser-children .tmpl-article.teaser-split.last {
     float: right;
+    margin-right: 0;
 }
 
 .teaser-children .tmpl-article:last-child {
@@ -390,6 +413,41 @@ current list in wp-admin
         margin:0;
         width: auto;
         float: none;
+    }
+}
+
+
+/* * * * * * * * * *
+ Smaller screens
+* * * * * * * * * * */
+@media screen and (max-width: 590px) {
+
+    .tmpl-article {
+        font-size: 13px;
+    }
+
+    .tmpl-article h1,
+    .tmpl-article h2,
+    .tmpl-article h3,
+    .tmpl-article h4,
+    .tmpl-article h5 {
+        font-size: 24px !important;
+        line-height: normal !important;
+        padding-bottom: 5px !important;
+    }
+
+    .tmpl-article.format-serif h4,
+    .tmpl-article.format-serif h3,
+    .tmpl-article.format-serif h2,
+    .tmpl-article.format-serif h1 {
+        font-size: 20px !important;
+    }
+
+    .teaser-children .tmpl-article.teaser-split,
+    body.arlima-preview .teaser-children .tmpl-article.teaser-split
+    {
+        float: none !important;
+        width: 100% !important;
     }
 }
 

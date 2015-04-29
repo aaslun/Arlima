@@ -65,7 +65,7 @@
     float: right;
     height: 26px;
     width: 23px;
-    background: url(../../../../wp-admin/images/arrows.png) no-repeat 4px 6px;
+    background: url(../images/arrows.png) no-repeat 4px 6px;
     cursor: pointer;
     .opacity(75);
   }
@@ -116,14 +116,27 @@
     }
   }
 
+  tbody td.include-group {
+    padding: 4px;
+    border:0;
+    opacity: 0.75;
+  }
+
+  tbody td.include-group.open {
+    opacity: 1;
+  }
+
   tbody td:first-child {
-    width: 320px;
-    cursor: move;
+    min-width: 320px;
 
       .edit-post-link {
         float: right;
         font-size: 13px;
       }
+  }
+
+  .ui-draggable {
+    cursor: move;
   }
 
   tbody tr {
@@ -136,6 +149,34 @@
     }
     th:last-child {
       text-align: right;
+    }
+  }
+
+  tbody table {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    border: #DDD solid 1px;
+
+    thead td {
+      border: 0;
+      background: url(../images/arrows.png) no-repeat 550px 10px #FFF;
+      cursor: pointer;
+    }
+
+    tbody td {
+      background: #FFF;
+      margin: 0;
+      border-top: #F2F2F2 solid 1px;
+      border-bottom: 0;
+    }
+  }
+
+  td.include-group.open table {
+    border-color: #CCC;
+
+    thead td {
+      background-position:550px -26px;
     }
   }
 
@@ -160,7 +201,25 @@
   padding: 10px;
   display: none;
   border: #DDD solid 1px;
+  overflow: hidden;
+  width: 100%;
   border-right: lightblue dashed 1px;
+
+  iframe {
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .iframe-wrapper {
+    border-top: lightblue dashed 4px;
+    padding-top: 10px;
+  }
+
+  .iframe-wrapper:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
 }
 
 
@@ -346,7 +405,7 @@
     }
 
     img {
-      max-width: 95%;
+      max-width: 100%;
       max-height: 250px;
     }
 
@@ -372,6 +431,14 @@
   .image.dragover,
   .image:hover {
     background: #e7ffe7;
+  }
+
+  img.dragover,
+  .image:hover img,
+  .image.dragover img {
+    opacity: 0.7;
+    -webkit-filter: grayscale(100%);
+    filter: grayscale(100%);
   }
 
   .image-controls {
@@ -433,6 +500,20 @@
   }
 
 }
+
+.fancybox {
+  img {
+    cursor: pointer;
+  }
+  img:hover {
+    opacity: 0.7;
+  }
+  .arlima-article-attachment {
+    float: left;
+    margin: 5px 10px;
+  }
+}
+
 
 // -- Title inputs
 #article-form .title-container {
@@ -501,6 +582,8 @@
     width: auto;
     display: block;
     text-overflow: clip;
+    padding-bottom: 5px;
+    padding-top: 6px;
   }
 
   .form-field.inline {
@@ -555,24 +638,39 @@
 
 
 // -- Post connection
-.connection-container {
+.wrap .connection-container {
   margin-top: @article-form-margin;
   margin-left: 5px;
   color: #888;
-  a {
+  line-height: 150%;
+  cursor: default;
+  a:link, a:visited {
+    cursor: pointer;
+    text-decoration: underline;
     color: #888;
   }
+  a:hover, a:active {
+    color: #111;
+    text-decoration: none;
+  }
   a.url {
-    margin: 0 3px 0 0;
-    max-width: 350px;
+    max-width: 250px;
     display: inline-block;
     overflow: hidden;
     text-overflow: ellipsis;
-    vertical-align: -2px;
+    vertical-align: -5px;
     white-space: nowrap;
+    margin: 0 2px;
   }
-  a:hover {
-    color: #111;
+  a.button {
+    margin: -3px 1px 0 3px;
+    font-weight: bold;
+    text-decoration: none !important;
+    color: #777;
+    i {
+      vertical-align: -12%;
+      margin-right: 2px;
+    }
   }
 }
 #article-connection {

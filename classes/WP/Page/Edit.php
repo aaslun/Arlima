@@ -5,7 +5,7 @@
  * @since 2.7
  * @package Arlima
  */
-class Arlima_Page_Edit extends Arlima_AbstractAdminPage {
+class Arlima_WP_Page_Edit extends Arlima_WP_AbstractAdminPage {
 
     function scripts()
     {

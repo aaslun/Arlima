@@ -17,14 +17,24 @@ class Arlima_TemplateObjectCreator
     private $is_child = false;
 
     /**
-     * @var string|bool
+     * @var null|array
      */
-    private $is_child_split = false;
+    private $child_split_state = null;
 
     /**
      * @var Arlima_List
      */
     private $list;
+
+    /**
+     * @var string
+     */
+    private $after_title_html = '';
+
+    /**
+     * @var string
+     */
+    private $before_title_html = '';
 
     /**
      * @var string
@@ -35,6 +45,18 @@ class Arlima_TemplateObjectCreator
      * @var int
      */
     private static $width = 468;
+
+    /**
+     * @var Arlima_CMSInterface
+     */
+    private $cms;
+
+    /**
+     */
+    public function __construct()
+    {
+        $this->cms = Arlima_CMSFacade::load();
+    }
 
     /**
      * @param string $s
@@ -69,7 +91,7 @@ class Arlima_TemplateObjectCreator
     }
 
     /**
-     * @return Arlima_List 
+     * @return Arlima_List
      */
     public function getList()
     {
@@ -93,24 +115,26 @@ class Arlima_TemplateObjectCreator
     }
 
     /**
-     * @param bool|string $is_child_split
+     * @param null|array $split_state
      */
-    public function setIsChildSplit($is_child_split)
+    public function setChildSplitState($split_state)
     {
-        $this->is_child_split = $is_child_split;
+        if (!is_array($split_state) || $split_state['count'] <= 1) {
+            $split_state = null;
+        }
+        $this->child_split_state = $split_state;
     }
 
     /**
-     * @return bool|string
+     * @return null|array
      */
-    public function getIsChildSplit()
+    public function getChildSplitState()
     {
-        return $this->is_child_split;
+        return $this->child_split_state;
     }
 
     /**
-     * @param $article
-     * @param $is_empty
+     * @param Arlima_Article $article
      * @param $post
      * @param $article_counter
      * @param null $template_name
@@ -118,41 +142,24 @@ class Arlima_TemplateObjectCreator
      */
     public function create(
         $article,
-        $is_empty,
         $post,
         $article_counter,
         $template_name = null
     ) {
-        static $child_float_toggle = false;
-
-        $obj = $article;
-        $has_streamer = !empty($article['options']['streamerType']);
-        $img_opt_size = isset($article['image']) && !empty($article['image']['size']) ? $article['image']['size'] : false;
-
-        if( !empty($article['post']) ) {
-            $obj['url'] = get_permalink($article['post']);
-        } elseif( !empty($article['options']['overridingURL']) ) {
-            $obj['url'] = $article['options']['overridingURL'];
-        }
+        $obj = $article->toArray();
+        $obj['url'] = $article->getURL();
+        $has_streamer = $article->hasStreamer();
+        $img_opt_size = $article->getImageSize();
+        $is_empty = $article->isEmpty();
 
         $obj['class'] = 'teaser' . ($is_empty ? ' empty' : '');
-        $obj['html_title'] = $is_empty ? '' : Arlima_Utils::getTitleHtml($obj, $this->list->getOptions());
-        $obj['is_child'] = $this->is_child;
+        $obj['html_title'] = $is_empty ? '' : Arlima_Utils::getTitleHtml($article, $this->list->getOptions());
+        $obj['is_child'] = $article->isChild();
 
-        // todo: remove when implemented #39
-        $obj['is_child_split'] = $this->is_child_split;
-        if( $this->is_child_split ) {
-            if( $child_float_toggle ) {
-                $obj['class'] .= ' last';
-                $child_float_toggle = false;
-            } else {
-                $child_float_toggle = true;
-                $obj['class'] .= ' first';
-            }
-        }
+        $obj['is_child_split'] = (bool)$this->child_split_state;
 
-        if ( !empty($article['options']) && !empty($article['options']['format']) ) {
-            $obj['class'] .= ' ' . $article['options']['format'];
+        if ( $format_class = $article->opt('format') ) {
+            $obj['class'] .= ' ' . $format_class;
         }
         if( $has_streamer ) {
             $obj['class'] .= ' has-streamer';
@@ -163,11 +170,18 @@ class Arlima_TemplateObjectCreator
         if( $this->is_child ) {
             $obj['class'] .= ' teaser-child';
         }
-        if( $this->is_child_split ) {
+        if( $this->child_split_state ) {
             $obj['class'] .= ' teaser-split'; // is one out of many children
+
+            if ($this->child_split_state['index'] == 0) {
+                $obj['class'] .= ' first';
+            }
+            if ($this->child_split_state['index'] == $this->child_split_state['count'] - 1) {
+                $obj['class'] .= ' last';
+            }
         }
 
-        if( !empty($article['children']) ) {
+        if( $article->hasChildren() ) {
             $obj['class'] .= ' has-children';
         }
 
@@ -182,7 +196,7 @@ class Arlima_TemplateObjectCreator
 
             $this->generateStreamerData($has_streamer, $obj, $article);
 
-            if ( empty($article['options']['hideRelated']) ) {
+            if ( !$article->opt('hideRelated') ) {
                 $obj['related'] = $this->applyFilter('arlima_article_related_content', $article_counter, $article, $post);
             }
         }
@@ -190,12 +204,12 @@ class Arlima_TemplateObjectCreator
         // Add article end content
         $obj['article_end'] = $this->applyFilter('arlima_article_end', $article_counter, $article, $post);
 
-        return apply_filters('arlima_template_object'. (self::$filter_suffix ? '-'.self::$filter_suffix:''),
-                        $obj, $article, $this->list, $template_name);
+        return $this->cms->applyFilters('arlima_template_object'. (self::$filter_suffix ? '-'.self::$filter_suffix:''),
+            $obj, $article, $this->list, $template_name);
     }
 
     /**
-     * @param $article
+     * @param Arlima_Article $article
      * @param $article_counter
      * @param $data
      * @param $img_opt_size
@@ -203,23 +217,12 @@ class Arlima_TemplateObjectCreator
      */
     protected function generateImageData($article, $article_counter, &$data, $img_opt_size, $post)
     {
-        $img = self::createImage($article, $article_counter, $post, $this->list, $this->is_child_split);
-        $has_img_url = !empty($article['image']['url']);
+        $img = self::createImage($article, $article_counter, $post, $this->list, $this->child_split_state);
 
-        if ( $img || $has_img_url ) {
-
-            if ( $has_img_url ) {
-                // todo: wtf??
-                preg_match('/src="([^"]*)"/i', $img, $arr);
-                if ( !empty($arr[1]) ) {
-                    $article['image']['url'] = $arr[1];
-                } else {
-                    $article['image']['url'] = false;
-                }
-            }
+        if ( $img ) {
 
             if( $img ) {
-                $img = apply_filters('arlima_article_image_tag', $img, $img_opt_size, $article, $this->list);
+                $img = $this->cms->applyFilters('arlima_article_image_tag', $img, $img_opt_size, $article, $this->list);
             }
 
             $data['html_image'] = $img;
@@ -242,34 +245,32 @@ class Arlima_TemplateObjectCreator
     }
 
     /**
-     * @param $article
+     * @param Arlima_Article $article
      * @param $article_counter
      * @param $post
      * @param $list
-     * @param bool $is_child_split
+     * @param null|array $child_split_state
      * @return string
      */
-    private static function createImage($article, $article_counter, $post, $list, $is_child_split=false)
+    private static function createImage($article, $article_counter, $post, $list, $child_split_state=null)
     {
         $filtered = array('content'=>'');
         $img_alt = '';
         $img_class = '';
-        $has_img = !empty($article['image']) && !empty($article['image']['attachment']);
-        $has_giant_tmpl = !empty($article['options']['template']) && $article['options']['template'] == 'giant';
+        $sys = Arlima_CMSFacade::load();
+        $attach = $article->getImageId();
+        $has_giant_tmpl = $article->opt('template') === 'giant';
 
-        $article_width = $is_child_split ? round(self::$width / 2) : self::$width;
+        $article_width = $child_split_state ? round(self::$width / $child_split_state['count']) : self::$width;
 
-        if ( $has_img && !$has_giant_tmpl && $attach_meta = wp_get_attachment_metadata($article['image']['attachment']) ) {
+        if ( $attach && !$has_giant_tmpl && $data = $sys->getImageData($attach) ) {
 
-            $dimension = self::getNewImageDimensions($article, $article_width, $attach_meta, $article['image']['attachment']);
+            list($height, $width, $file) = $data;
 
-            if( !$dimension ) {
-                // For some reason unable to calculate new image dimensions, more info in error log
-                return '';
-            }
-
-            $img_class = $article['image']['size'] . ' ' . $article['image']['alignment'];
-            $img_alt = htmlspecialchars($article['title']);
+            $dimension = self::getNewImageDimensions($article, $article_width, $width, $height);
+            $img_size = $article->getImageSize();
+            $img_class = $img_size . ' ' . $article->getImageAlignment();
+            $img_alt = $article->getTitle('', true);
 
             // Let other plugin take over this function entirely
             $filtered = self::filter(
@@ -282,18 +283,20 @@ class Arlima_TemplateObjectCreator
                 null,
                 null,
                 $article_width,
-                $dimension
+                $dimension,
+                '',
+                $data
             );
 
             if( !empty($filtered['content']) )
                 return $filtered['content'];
 
-            $attach_url = wp_get_attachment_url($article['image']['attachment']);
-            $resized_url = self::generateImageVersion(
-                $attach_meta['file'],
+            $attach_url = $sys->getImageURL($attach);
+            $resized_url = Arlima_CMSFacade::load()->generateImageVersion(
+                $file,
                 $attach_url,
-                $dimension,
-                $article['image']['attachment']
+                $dimension[0],
+                $attach
             );
 
             $filtered = self::filter(
@@ -302,16 +305,16 @@ class Arlima_TemplateObjectCreator
                 $article,
                 $post,
                 $list,
-                $article['image']['size'],
+                $img_size,
                 $attach_url,
                 $resized_url,
                 $article_width
             );
 
         }
-        elseif( empty($article['image']['attachment']) && !empty($article['image']['externalAttachment']) ) {
-            //external images, just try to fit them
-            switch ($article['image']['size']) {
+        elseif( $attach_url = $article->getImageURL() ) {
+            // has reference to an image URL only.. so this should be an external image
+            switch ( $article->getImageSize() ) {
                 case 'half':
                     $dimension = array(round($article_width * 0.5));
                     break;
@@ -331,9 +334,9 @@ class Arlima_TemplateObjectCreator
                     $dimension = array($article_width);
                     break;
             }
-            $img_class = $article['image']['size'] . ' ' . $article['image']['alignment'];
-            $img_alt = htmlspecialchars($article['title']);
-            $filtered['resized'] = $article['image']['url'];
+            $img_class = $article->getImageSize() . ' ' . $article->getImageAlignment();
+            $img_alt = $article->getTitle('', true);
+            $filtered['resized'] = $attach_url;
         }
         elseif(!$has_giant_tmpl) {
             // Callback for empty image
@@ -364,73 +367,75 @@ class Arlima_TemplateObjectCreator
     }
 
 
-
     /**
-     * @param $article
+     * @param Arlima_Article $article
      * @param $article_width
-     * @param $attach_meta
-     * @param int $attach_id
+     * @param $width
+     * @param $height
      * @return array
      */
-    private static function getNewImageDimensions($article, $article_width, $attach_meta, $attach_id)
+    private static function getNewImageDimensions($article, $article_width, $width, $height)
     {
-        if( empty($attach_meta['height']) || empty($attach_meta['width']) ) {
-            error_log('PHP Warning: Have to regenerate height and width for '.$attach_meta['file']);
-            list($width, $height) = getimagesize($attach_meta['file']);
-            $attach_meta['height'] = $height;
-            $attach_meta['width'] = $width;
-            wp_update_attachment_metadata($attach_id, $attach_meta);
-            return false;
-        }
-
-        switch ($article['image']['size']) {
+        $calc_width = false;
+        switch ($article->getImageSize()) {
             case 'half':
-                $width = round($article_width * 0.5);
-                $size = array($width, round($attach_meta['height'] * ($width / $attach_meta['width'])));
+                $calc_width = round($article_width * 0.5);
                 break;
             case 'third':
-                $width = round($article_width * 0.33);
-                $size = array($width, round($attach_meta['height'] * ($width / $attach_meta['width'])));
+                $calc_width = round($article_width * 0.33);
                 break;
             case 'quarter':
-                $width = round($article_width * 0.25);
-                $size = array($width, round($attach_meta['height'] * ($width / $attach_meta['width'])));
+                $calc_width = round($article_width * 0.25);
                 break;
             case 'fifth':
-                $width = round($article_width * 0.20);
-                $size = array($width, round($attach_meta['height'] * ($width / $attach_meta['width'])));
+                $calc_width = round($article_width * 0.20);
                 break;
             case 'sixth':
-                $width = round($article_width * 0.15);
-                $size = array($width, round($attach_meta['height'] * ($width / $attach_meta['width'])));
-                break;
-            default:
-                $size = array(
-                    $article_width,
-                    round($attach_meta['height'] * ($article_width / $attach_meta['width']))
-                );
+                $calc_width = round($article_width * 0.15);
                 break;
         }
+
+        $size = array();
+
+        if( !$calc_width ) {
+            // full article width (dont upscale images)
+            if( $width <= $article_width ) {
+                $size = array($width, $height);
+            } else {
+                $size = array(
+                    $article_width,
+                    round($height * ($article_width / $width))
+                );
+            }
+        } else {
+            if( $width <= $calc_width ) {
+                $size = array($width, $height);
+            } else {
+                $size = array($calc_width, round($height * ($calc_width / $width)));
+            }
+        }
+
         return $size;
     }
 
     /**
      * @param $has_streamer
      * @param &$data
-     * @param $article
+     * @param Arlima_Article $article
      */
     protected function generateStreamerData($has_streamer, &$data, $article)
     {
         $data['class'] .= ($has_streamer ? '' : ' no-streamer');
+
         if ( $has_streamer ) {
 
+            $type = $article->opt('streamerType');
             $content = '';
             $style_attr = '';
-            $streamer_classes = $data['options']['streamerType'];
-            $streamer_content = isset($data['options']['streamerContent']) ?
-                    $data['options']['streamerContent'] : '';
+            $streamer_classes = $type;
+            $streamer_content = $article->opt('streamerContent', '');
 
-            switch ($data['options']['streamerType']) {
+            switch ( $type ) {
                 case 'extra' :
                     $content = 'EXTRA';
                     break;
@@ -440,9 +445,9 @@ class Arlima_TemplateObjectCreator
                     break;
                 case 'text':
                     $content = $streamer_content;
-                    if( isset($data['options']['streamerColor']) ) {
-                        $style_attr = ' style="background: #'.$data['options']['streamerColor'].'"';
-                        $streamer_classes .= ' color-'.$data['options']['streamerColor'];
+                    if( $color = $article->opt('streamerColor') ) {
+                        $style_attr = ' style="background: #'.$color.'"';
+                        $streamer_classes .= ' color-'.$color;
                     }
                     break;
                 default :
@@ -474,49 +479,16 @@ class Arlima_TemplateObjectCreator
      */
     public function setBeforeTitleHtml($after_title_html)
     {
-        $this->after_title_html = $after_title_html;
+        $this->before_title_html = $after_title_html;
     }
 
     /**
-     * @param string $file
-     * @param string $attach_url
-     * @param array $dimension array(width, height)
-     * @param int $attach_id
-     * @return string
-     */
-    private static function generateImageVersion($file, $attach_url, $dimension, $attach_id)
-    {
-        if( !Arlima_Plugin::supportsImageEditor() ) {
-            $resized_img = image_resize(
-                WP_CONTENT_DIR . '/uploads/' . $file,
-                $dimension[0],
-                null,
-                false,
-                null,
-                null,
-                98
-            );
-
-            if ( !is_wp_error($resized_img) ) {
-                $img_url = dirname($attach_url) . '/' . basename($resized_img);
-            } else {
-                $img_url = $attach_url;
-            }
-        } else {
-            $version_manager = new Arlima_ImageVersionManager($attach_id, new Arlima_Plugin());
-            $img_url = $version_manager->getVersionURL($dimension[0]);
-            if( $img_url === false )
-                $img_url = $attach_url;
-        }
-
-        return $img_url;
-    }
-
-    /**
+     * @param $tag
      * @param $article_counter
      * @param $article
      * @param $post
-     * @return string
+     * @param string $content
+     * @return mixed
      */
     private function applyFilter($tag, $article_counter, $article, $post, $content='')
     {
@@ -525,21 +497,23 @@ class Arlima_TemplateObjectCreator
     }
 
     /**
-     * @param string $filter
-     * @param int $article_counter
-     * @param array $article
-     * @param WP_Post $post
-     * @param Arlima_List $list
+     * @param $filter
+     * @param $article_counter
+     * @param $article
+     * @param $post
+     * @param $list
      * @param bool $img_size
      * @param bool $source_url
      * @param bool $resized_url
      * @param bool $width
      * @param bool $dim
-     * @return array|mixed|void
+     * @param string $content
+     * @return array
      */
     private static function filter($filter, $article_counter, &$article,
                                    $post, $list, $img_size=false, $source_url = false,
-                                   $resized_url=false, $width=false, $dim=false, $content='')
+                                   $resized_url=false, $width=false, $dim=false,
+                                   $content='', $img_file_data=false)
     {
         $data = array(
             'article' => $article,
@@ -558,11 +532,14 @@ class Arlima_TemplateObjectCreator
         if( $dim ) {
             $data['dimensions'] = $dim;
         }
+        if( $img_file_data ) {
+            $data['original_img'] = $img_file_data;
+        }
 
         if( !empty(self::$filter_suffix) )
             $filter .= '-'.self::$filter_suffix;
 
-        $filtered_data = apply_filters($filter, $data);
+        $filtered_data = Arlima_CMSFacade::load()->applyFilters($filter, $data);
         if( empty($filtered_data) ) {
             $filtered_data = array('content' => false);
         }

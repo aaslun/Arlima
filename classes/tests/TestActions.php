@@ -1,6 +1,5 @@
 <?php
 
-require_once __DIR__ . '/setup.php';
 
 class TestActions extends PHPUnit_Framework_TestCase {
 
@@ -20,7 +19,7 @@ class TestActions extends PHPUnit_Framework_TestCase {
     private function createList($num_articles = 3) {
         $article_collection = array();
         for($i = 1; $i <= $num_articles; $i++) {
-            $article_collection[] = Arlima_ListFactory::createArticleDataArray(array('title' => 'article'.$i));
+            $article_collection[] = Arlima_ListVersionRepository::createArticle(array('title' => 'article'.$i));
         }
 
         $list = new Arlima_List(true, 99);
@@ -194,16 +193,31 @@ class TestActions extends PHPUnit_Framework_TestCase {
         $list->setOption('template', 'some-template');
 
         $articles = $list->getArticles();
-        $articles[0]['children'] = array(
-            Arlima_ListFactory::createArticleDataArray(array('title' => 'childA', 'parent'=>0)),
-            Arlima_ListFactory::createArticleDataArray(array('title' => 'childB', 'parent'=>0))
-        );
+        $articles[0]->addChild(Arlima_ListVersionRepository::createArticle(array('title' => 'childA', 'parent'=>0))->toArray());
+        $articles[0]->addChild(Arlima_ListVersionRepository::createArticle(array('title' => 'childB', 'parent'=>0))->toArray());
 
         $list->setArticles($articles);
 
         $renderer = new Arlima_ListTemplateRenderer($list, __DIR__.'/test-templates/');
         $content = arlima_render_list($renderer, array('echo'=>false));
-        $expected = 'hello------<div class="arlima child-wrapper">hello-----childA--_IS_SPLIT_-hello-----childB--_IS_SPLIT_-</div>';
+        $expected = 'hello------hello-----childA---hello-----childB---';
+
+        $this->assertEquals($expected, $content);
+    }
+
+    public function testFloatingChildArticles() {
+        $list = $this->createList(1);
+        $list->setOption('template', 'some-template');
+
+        $articles = $list->getArticles();
+        $articles[0]->addChild(Arlima_ListVersionRepository::createArticle(array('title' => 'childA', 'parent'=>0, 'options'=>array('floating'=>true)))->toArray());
+        $articles[0]->addChild(Arlima_ListVersionRepository::createArticle(array('title' => 'childB', 'parent'=>0, 'options'=>array('floating'=>true, 'inlineWithChild'=>0)))->toArray());
+
+        $list->setArticles($articles);
+
+        $renderer = new Arlima_ListTemplateRenderer($list, __DIR__.'/test-templates/');
+        $content = arlima_render_list($renderer, array('echo'=>false));
+        $expected = 'hello------<div class="arlima child-wrapper child-wrapper-2">hello-----childA--_IS_SPLIT_-hello-----childB--_IS_SPLIT_-</div>';
 
         $this->assertEquals($expected, $content);
     }
@@ -213,9 +227,7 @@ class TestActions extends PHPUnit_Framework_TestCase {
         $list->setOption('template', 'some-template');
 
         $articles = $list->getArticles();
-        $articles[0]['children'] = array(
-            Arlima_ListFactory::createArticleDataArray(array('title' => 'childA', 'parent'=>0))
-        );
+        $articles[0]->addChild(Arlima_ListFactory::createArticleDataArray(array('title' => 'childA', 'parent'=>0))->toArray());
 
         $list->setArticles($articles);
 

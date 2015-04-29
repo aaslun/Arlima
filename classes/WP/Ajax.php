@@ -4,16 +4,13 @@
  * Class that has all wp ajax functions used by this plugin. Important that you don't use closures
  * or any other php features that isn't available in php 5.2 in this file
  *
- * @todo: Remove all muting of possibly incorrect ajax requests
- * @todo: Move HTML code to other files
  * @package Arlima
  * @since 2.0
  */
-class Arlima_AdminAjaxManager
+class Arlima_WP_Ajax
 {
-
     /**
-     * @var Arlima_Plugin
+     * @var Arlima_WP_Plugin
      */
     private $arlima_plugin;
 
@@ -23,14 +20,16 @@ class Arlima_AdminAjaxManager
     private $has_preamble_func;
 
     /**
-     * @var bool
+     * @var Arlima_CMSInterface
      */
+    private $cms;
 
     /**
-     * @param Arlima_Plugin $arlima_plugin
+     * @param Arlima_WP_Plugin $arlima_plugin
      */
     public function __construct($arlima_plugin)
     {
+        $this->cms = Arlima_CMSFacade::load();
         $this->arlima_plugin = $arlima_plugin;
         $this->has_preamble_func = function_exists('vk_get_preamble');
     }
@@ -79,7 +78,6 @@ class Arlima_AdminAjaxManager
                     $_POST['line'],
                     $_POST['stack']);
 
-        error_log($log);
         die(json_encode(array('log'=>'saved')));
     }
 
@@ -94,8 +92,8 @@ class Arlima_AdminAjaxManager
         }
         else {
             try {
-                $factory = new Arlima_ListFactory();
-                $factory->updateArticle($_POST['ala_id'], $_POST['update']);
+                $ver_repo = new Arlima_ListVersionRepository();
+                $ver_repo->updateArticle($_POST['ala_id'], $_POST['update']);
                 die(json_encode(array('success'=>1)));
             } catch(Exception $e) {
                 die(json_encode(array('error'=>$e->getMessage())));
@@ -128,13 +126,13 @@ class Arlima_AdminAjaxManager
         // Arlima admin request
         if( !empty($_POST['attachment']) ) {
             $this->initAjaxRequest();
-            Arlima_ImageVersionManager::removeVersions($_POST['attachment']);
+            Arlima_WP_ImageVersionManager::removeVersions($_POST['attachment']);
             die( json_encode(array('success'=>true)));
         }
 
         // image editor in wp-admin
         elseif( !empty($_POST['postid']) && is_user_logged_in() ) {
-            Arlima_ImageVersionManager::removeVersions($_POST['postid']);
+            Arlima_WP_ImageVersionManager::removeVersions($_POST['postid']);
         }
         else {
             die( json_encode(array('error'=>'No attachment given')) );
@@ -171,7 +169,7 @@ class Arlima_AdminAjaxManager
                 if( $file ) {
                     $tmp_file = get_temp_dir().'/'.uniqid();
                     copy(WP_CONTENT_DIR .'/uploads/'. $file, $tmp_file);
-                    $new_attach_id = Arlima_Plugin::saveImageFileAsAttachment($tmp_file, basename($file), '');
+                    $new_attach_id = Arlima_WP_Plugin::saveImageFileAsAttachment($tmp_file, basename($file), '');
                     list($attach_url) = wp_get_attachment_image_src($new_attach_id, 'default');
 
                     echo json_encode(
@@ -228,9 +226,10 @@ class Arlima_AdminAjaxManager
         );
 
         // Make it possible for theme to override templates
+        // @todo: rename from template to preset
         $templates = apply_filters('arlima_teaser_templates', $templates);
         foreach($templates as $key => $data) {
-            $templates[$key] = Arlima_ListFactory::createArticleDataArray($data);
+            $templates[$key] = Arlima_ListVersionRepository::createArticle($data)->toArray();
         }
 
         echo json_encode($templates);
@@ -258,7 +257,7 @@ class Arlima_AdminAjaxManager
         $this->initAjaxRequest();
 
         try {
-            $id = Arlima_Plugin::saveImageAsAttachment(
+            $id = Arlima_WP_Plugin::saveImageAsAttachment(
                         $_POST['image'],
                         $_POST['name'],
                         empty($_POST['postid']) ? '':$_POST['postid']
@@ -388,10 +387,9 @@ class Arlima_AdminAjaxManager
         $this->initAjaxRequest();
 
         $version_id = isset($_POST['alvid']) ? $_POST['alvid'] : null;
-        $list_factory = $this->loadListFactory();
-
         if( $version_id ) {
-            $list_factory->deleteListVersion($version_id);
+            $ver_repo = new Arlima_ListVersionRepository();
+            $ver_repo->delete($version_id);
         }
 
         die(json_encode(array()));
@@ -416,10 +414,14 @@ class Arlima_AdminAjaxManager
             setup_postdata($post);
             $GLOBALS['post'] = $post; // Something is removing post from global, even though we call setup_postdata
 
-            $list = $this->loadListFactory()->loadList($list_id, false, true);
+            $list = Arlima_List::builder()
+                        ->id($list_id)
+                        ->includeFutureArticles()
+                        ->build();
+
             $articles = $list->getArticles();
 
-            array_unshift($articles, $this->postToArlimaArticle($post));
+            array_unshift($articles, $this->cms->postToArlimaArticle($post));
             $this->saveAndOutputList($list, $articles);
             die;
 
@@ -429,21 +431,15 @@ class Arlima_AdminAjaxManager
     }
 
     /**
-     * @return Arlima_ListFactory
-     */
-    private function loadListFactory() {
-        return new Arlima_ListFactory();
-    }
-
-    /**
      * Update a specific version of a list
      */
     function updateListVersion() {
         $this->initAjaxRequest();
-        $factory = $this->loadListFactory();
-        $list = $factory->loadList($_POST['alid']);
-        $factory->updateListVersion($list, $this->getArticlesFromRequest(), $_POST['version']);
-        $this->outputListData($factory->loadList($_POST['alid'], $_POST['version'], true)); // reload the list and send to browser
+        $list_repo = new Arlima_ListRepository();
+        $ver_repo = new Arlima_ListVersionRepository();
+        $list = $list_repo->load($_POST['alid']);
+        $ver_repo->update($list, $this->getArticlesFromRequest(), $_POST['version']);
+        $this->outputListData($_POST['alid'], $_POST['version']); // reload the list and send to browser
         die;
     }
 
@@ -457,11 +453,12 @@ class Arlima_AdminAjaxManager
         $list_id = isset($_POST['alid']) ? intval($_POST['alid']) : false;
 
         // Is the list scheduled for the automatic publishing queue?
-        $schedule_time = (isset($_POST['scheduleTime']) || $_POST['scheduleTime'] == '') ? intval($_POST['scheduleTime']) : 0;
+        $schedule_time = !empty($_POST['scheduleTime']) ? intval($_POST['scheduleTime']) : 0;
+        $preview = !$schedule_time && isset($_POST['preview']);
 
         if ( $list_id ) {
             $articles = $this->getArticlesFromRequest();
-            $this->saveAndOutputList($list_id, $articles, $schedule_time, isset($_POST['preview']));
+            $this->saveAndOutputList($list_id, $articles, $schedule_time, $preview);
         }
 
         die;
@@ -474,20 +471,26 @@ class Arlima_AdminAjaxManager
      */
     private function saveAndOutputList($list_id, $articles, $schedule_time = false, $preview = false)
     {
-        $list_factory = $this->loadListFactory();
+        $list_repo = new Arlima_ListRepository();
+        $ver_repo = new Arlima_ListVersionRepository();
 
         if ( $list_id instanceof Arlima_List ) {
             $list = $list_id;
         } else {
-            $list = $list_factory->loadList($list_id);
+            $list = $list_repo->load($list_id);
         }
 
-        $version_id = $list_factory->saveNewListVersion($list, $articles, get_current_user_id(), $schedule_time, $preview);
+        $user_id = get_current_user_id();
+        if( $schedule_time ) {
+            $version_id = $ver_repo->createScheduledVersion($list, $articles, $user_id, $schedule_time);
+        } else {
+            $version_id = $ver_repo->create($list, $articles, $user_id, $preview);
+            if( $preview ) {
+                $version_id = 'preview';
+            }
+        }
 
-        // Reload list to get latest version
-        $list = $list_factory->loadList($list->getId(), $version_id, true);
-
-        $this->outputListData($list);
+        $this->outputListData($list->getId(), $version_id);
     }
 
     /**
@@ -501,12 +504,14 @@ class Arlima_AdminAjaxManager
         $version = isset($_POST['version']) ? (int)$_POST['version'] : false;
 
         if ( $list_id && $version ) {
-            $list = $this->loadListFactory()->loadList($list_id);
+
+            $list = Arlima_List::builder()->id($list_id)->build();
+
             if ( $list->getVersionAttribute('id') > $version ) {
                 echo json_encode(
                     array(
                         'version' => $list->getVersion(),
-                        'versioninfo' => $list->getVersionInfo()
+                        'versioninfo' => $this->getVersionInfo($list)
                     )
                 );
                 die;
@@ -516,7 +521,7 @@ class Arlima_AdminAjaxManager
         echo json_encode(array('version' => false));
         die;
     }
-
+    
     /**
      * Fetches an arlima list and outputs it in widget form
      */
@@ -529,8 +534,7 @@ class Arlima_AdminAjaxManager
         $version = isset($_POST['version']) && is_numeric($_POST['version']) ? (int)$_POST['version'] : false;
 
         if ( is_numeric($list_id) ) {
-            $list = $this->loadListFactory()->loadList($list_id, $version, true);
-            $this->outputListData($list);
+            $this->outputListData($list_id, $version);
         } elseif ( $list_id ) {
             // Probably url referring to an imported list
             try {
@@ -547,25 +551,71 @@ class Arlima_AdminAjaxManager
     }
 
     /**
-     * Outputs a list in json format
+     * Returns info about the version of this list
      * @param Arlima_List $list
+     * @param string $no_version_text[optional=''] The text returned if this is list is of no version
+     * @return string
      */
-    private function outputListData($list)
+    private function getVersionInfo($list, $no_version_text = '')
     {
-        $connector = new Arlima_ListConnector($list);
-        $preview_page = current($connector->loadRelatedPages());
+        if( $list->isImported() ) {
+            return sprintf(__('Last modified %s a go', 'arlima'), human_time_diff($list->getVersionAttribute('created')));
+        } else {
+            if ( $list->getStatus() != Arlima_List::STATUS_EMPTY ) {
+                $user_data = get_userdata($list->getVersionAttribute('user_id'));
+                $saved_since = '';
+                $saved_by = __('Unknown', 'arlima');
+                $lang_saved_since = __(' saved since ', 'arlima');
+                $lang_by = __(' by ', 'arlima');
+
+                if ( !empty($version['created']) ) {
+                    $saved_since = $lang_saved_since . human_time_diff($version['created']);
+                }
+                if ( $user_data ) {
+                    $saved_by = $user_data->display_name;
+                }
+
+                return 'v ' . $list->getVersionAttribute('id') . ' ' . $saved_since . $lang_by . $saved_by;
+            } else {
+                return $no_version_text;
+            }
+        }
+    }
+
+    /**
+     * Outputs the data of a list
+     *
+     * @todo This makes unecessary db queries when called. Change so that updating functions returns sanitized data
+     *
+     * @param int $list
+     * @param int|false $version
+     */
+    private function outputListData($list_id, $version=false)
+    {
+        $builder = Arlima_List::builder()
+                    ->id($list_id)
+                    ->includeFutureArticles();
+
+        if( $version == 'preview' ) {
+            $builder->loadPreview();
+        } else {
+            $builder->version($version);
+        }
+
+        $list = $builder->build();
+        $preview_page = current($this->cms->loadRelatedPages($list));
         $preview_url = '';
         $preview_width = '';
 
         // Get article width from a related page
         if( $preview_page ) {
             $preview_url = get_permalink($preview_page->ID);
-            $relation = $connector->getRelationData($preview_page->ID);
+            $relation = $this->cms->getRelationData($preview_page->ID);
             $preview_width = $relation['attr']['width'];
         }
 
-        // Get article width form a widget where the list is used
-        elseif( $widget = current($connector->loadRelatedWidgets()) ) {
+        // Get article width from a widget where the list is used
+        elseif( $widget = current($this->cms->loadRelatedWidgets($list)) ) {
             $preview_width = $widget['width'];
         }
 
@@ -585,7 +635,7 @@ class Arlima_AdminAjaxManager
     private function setupPostObject($post) {
         if( is_object($post) && ($post->post_status == 'future' || $post->post_status == 'publish' || $post->post_status == 'draft') ) {
             $post->url = get_permalink($post->ID);
-            $post->published = Arlima_Utils::getPostTimeStamp($post);
+            $post->published = $this->cms->getPostTimeStamp($post);
             $post->display_date = $post->post_date;
             $post->display_author = get_the_author_meta('display_name', $post->post_author);
             $post->edit_url = get_edit_post_link($post->ID);
@@ -688,7 +738,7 @@ class Arlima_AdminAjaxManager
 
         $attachment_id = $_POST['attachment'];
 
-        if ( Arlima_Plugin::isScissorsInstalled() ) {
+        if ( Arlima_WP_Plugin::isScissorsInstalled() ) {
 
             $scissors_output = '';
             $thumb = get_post($attachment_id);
@@ -758,7 +808,7 @@ class Arlima_AdminAjaxManager
             $GLOBALS['post'] = $post; // Soemhting is removing post from global, even though we call setup_postdata
 
             $articles[] = array(
-                'data' => $this->postToArlimaArticle($post),
+                'data' => $this->cms->postToArlimaArticle($post)->toArray(),
                 'post' => $this->setupPostObject($post)
             );
         }
@@ -769,24 +819,6 @@ class Arlima_AdminAjaxManager
     }
 
     /**
-     * @param $post
-     * @return array
-     */
-    private function postToArlimaArticle($post)
-    {
-        if ( $this->has_preamble_func ) {
-            $text = vk_get_preamble();
-        } else {
-            // weird, "get_the_excerpt" should return the manual excerpt but does not seem to do this in the admin context
-            $text = !empty($post->post_excerpt) ? $post->post_excerpt : get_the_excerpt();
-        }
-        if ( stristr($text, '<p>') === false ) {
-            $text = '<p>' . $text . '</p>';
-        }
-        return Arlima_ListFactory::postToArlimaArticle($post, $text);
-    }
-
-    /**
      * @param Arlima_List $list
      * @param string $preview_url
      * @param int $preview_width
@@ -794,11 +826,33 @@ class Arlima_AdminAjaxManager
      */
     protected function listToJSON($list, $preview_url, $preview_width)
     {
+        // Add user names to version list. Don't do this deeper
+        // down, it results in up towards 10 possibly extra db queries
+
+        $versions = array();
+        if( $list->isImported() ) {
+            foreach($list->getPublishedVersions() as $ver) {
+                $ver['saved_by'] = 'Unknown';
+                $versions[] = $ver;
+            }
+        } else {
+            foreach($list->getPublishedVersions() as $ver) {
+                $user_data = get_userdata($ver['user_id']);
+                $ver['saved_by'] = $user_data ? $user_data->display_name : __('Unknown', 'arlima');
+                $versions[] = $ver;
+            }
+        }
+
+        $articles = array();
+        foreach($list->getArticles() as $art) {
+            $articles[] = $art->toArray();
+        }
+
         return json_encode(array(
-            'articles' => $list->getArticles(),
+            'articles' => $articles,
             'version' => $list->getVersion(),
-            'versionDisplayText' => $list->getVersionInfo(),
-            'versions' => $list->getVersions(),
+            'versionDisplayText' => $this->getVersionInfo($list),
+            'versions' => $versions,
             'scheduledVersions' => $list->getScheduledVersions(),
             'titleElement' => $list->getTitleElement(),
             'isImported' => $list->isImported(),

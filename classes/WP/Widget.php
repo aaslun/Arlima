@@ -1,13 +1,12 @@
 <?php
 
-
 /**
  * Widget displaying an article list
  *
  * @since 2.5.9
  * @package Arlima
  */
-class Arlima_Widget extends WP_Widget {
+class Arlima_WP_Widget extends WP_Widget {
 
     const WIDGET_PREFIX = 'arlima-widget';
 
@@ -40,8 +39,7 @@ class Arlima_Widget extends WP_Widget {
             echo $args['before_title'] .$instance['title']. $args['after_title'];
         }
 
-        $factory = new Arlima_ListFactory();
-        $list = $factory->loadList($instance['list']);
+        $list = Arlima_List::builder()->id($instance['list'])->build();
         if( !empty($instance['template']) ) {
             $list->setOption('template', $instance['template']);
         }
@@ -80,8 +78,8 @@ class Arlima_Widget extends WP_Widget {
                 'title' => ''
             ), $instance);
 
-        $factory = new Arlima_ListFactory();
-        $lists = $factory->loadListSlugs();
+        $repo = new Arlima_ListRepository();
+        $lists = $repo->loadListSlugs();
 
         ?>
         <table cellpadding="5">
@@ -138,4 +136,4 @@ class Arlima_Widget extends WP_Widget {
     <?php
     }
 }
-register_widget('Arlima_Widget');
+#register_widget('Arlima_WP_Widget');

@@ -22,7 +22,7 @@ class Arlima_ListTemplateRenderer extends Arlima_AbstractListRenderingManager
     protected $default_template_name = null;
 
     /**
-     * @var Arlima_TemplateEngine
+     * @var Arlima_TemplateEngineInterface
      */
     protected $template_engine;
 
@@ -45,10 +45,10 @@ class Arlima_ListTemplateRenderer extends Arlima_AbstractListRenderingManager
      * used is an option in the article list object (Arlima_List). If no template exists in declared
      * template paths we will fall back on default templates (plugins/arlima/template/[name].tmpl)
      *
-     * @param bool $output[optional=true]
+     * @param bool $echo_output[optional=true]
      * @return string
      */
-    protected function generateListHtml($output = true)
+    protected function generateListHtml($echo_output = true)
     {
         $count = 0;
         $list_content = '';
@@ -58,18 +58,18 @@ class Arlima_ListTemplateRenderer extends Arlima_AbstractListRenderingManager
             $this->template_engine->setDefaultTemplate($this->default_template_name);
         } catch(Exception $e) {
             $message = 'You are using a default template for the list "'.$this->list->getTitle().'" that could not be found';
-            if( $output ) {
+            if( $echo_output ) {
                 echo $message;
             } else {
                 return $message;
             }
         }
 
-        foreach ($this->getArticlesToRender() as $article_data) {
+        foreach ($this->getArticlesToRender() as $article) {
 
-            list($count, $content) = $this->renderArticle($article_data, $count);
+            list($count, $content) = $this->renderArticle($article, $count);
 
-            if ( $output ) {
+            if ( $echo_output ) {
                 echo $content;
             } else {
                 $list_content .= $content;
@@ -84,104 +84,125 @@ class Arlima_ListTemplateRenderer extends Arlima_AbstractListRenderingManager
     }
 
     /**
-     * @param array $article_data
+     * @param Arlima_Article $article
      * @param int $index
-     * @param null|stdClass|WP_Post $post
-     * @param bool $is_empty
+     * @param mixed $post
      * @return array
      */
-    protected function generateArticleHtml($article_data, $index, $post, $is_empty)
+    protected function generateArticleHtml($article, $index, $post)
     {
         $child_article_html = '';
-        $content = '';
 
-        if( !empty($article_data['children']) ) {
-            $child_article_html = $this->renderChildArticles($article_data['children']);
+        if( $article->hasChildren() ) {
+            $child_article_html = $this->renderChildArticles($article->getChildArticles());
         }
 
-        $template_name = $this->getTemplateToUse($article_data);
-        return $this->template_engine->renderArticle($template_name, $index, $article_data, $is_empty, $post, $child_article_html);
+        $template_name = $this->getTemplateToUse($article);
+        return $this->template_engine->renderArticle($template_name, $index, $article, $post, $child_article_html);
     }
 
     /**
-     * @param array $articles
+     * @param Arlima_Article $article
+     * @param int $index
+     * @return string
+     */
+    protected function includeArticleFile($article, $index)
+    {
+        $data = $article->toArray();
+        $data['content'] = parent::includeArticleFile($article, $index);
+        $article = new Arlima_Article($data);
+        return $this->template_engine->renderArticle('file-include', $index, $article, false, '');
+    }
+
+    /**
+     * @param Arlima_Article[] $articles
      * @return string
      */
     private function renderChildArticles($articles)
     {
         $child_articles = '';
         $count = 0;
+        $split_state = null;
         $has_open_child_wrapper = false;
-        $num_children = count($articles);
-        $has_even_children = $num_children % 2 === 0;
 
-        // if ARLIMA_GROUP_CHILD_ARTICLES is false will the variable $has_open_child_wrapper always be false
-        // and then no grouping will be applied
-
-        // Configure object creator for child articles
-
-        foreach ($articles as $article_data) {
+        foreach ($articles as $i => $art) {
 
             $first_or_last_class = '';
-            $is_child_split = false;
+            $is_floating = (bool)$art->opt('floating');
 
-            if(
-                ARLIMA_GROUP_CHILD_ARTICLES && (
-                    ($num_children == 4 && ($count == 1 || $count == 2)) ||
-                    ($num_children == 6 && ($count != 0 && $count != 3)) ||
-                    ($num_children > 1 && $num_children != 4 && $num_children != 6 && ($count != 0 || $has_even_children) )
-                )
-            ) {
-                $is_child_split = true;
-                $first_or_last_class = (($count==1 && $num_children > 2) || ($count==0 && $num_children==2) || $count==3 || ($count==4 && $num_children ==6)? ' first':' last');
-                if( $first_or_last_class == ' first' ) {
-                    $child_articles .= '<div class="arlima child-wrapper">';
+            if ($is_floating) {
+
+                if (!$split_state || ($split_state && $art->opt('inlineWithChild') === false)) {
+
+                    $following_count = 0;
+                    for ($j = $i + 1; $j < count($articles); $j++) {
+                        if ( $articles[$j]->opt('floating') && $articles[$j]->opt('inlineWithChild') !== false ) {
+                            $following_count++;
+                        } else {
+                            break;
+                        }
+                    }
+                    $split_state = array(
+                            'index' => 0,
+                            'count' => $following_count + 1
+                         );
+
+                } else {
+                    $split_state['index'] += 1;
+                }
+
+                if ($split_state['count'] == 1) { // single floating. reset status!
+                    $is_floating = false;
+                }
+                elseif ( $split_state['index'] == 0 ) {
+                    $first_or_last_class = ' first';
+                    $child_articles .= '<div class="arlima child-wrapper child-wrapper-'.$split_state['count'].'">';
                     $has_open_child_wrapper = true;
                 }
-            }
-
-            // File include
-            if( $this->isFileIncludeArticle($article_data) ) {
-                $count++;
-                $child_articles .= '<div class="arlima-file-include teaser '.$first_or_last_class.
-                    ( $is_child_split ? ' teaser-split':'').
-                    '">'.$this->includeArticleFile($article_data).'</div>';
-                continue;
-            }
-
-            list($post, $article, $is_empty) = $this->setup($article_data);
-
-            if ( !empty($article['published']) && $article['published'] > Arlima_Utils::timeStamp() ) {
-                if( ARLIMA_GROUP_CHILD_ARTICLES && $has_open_child_wrapper  && $first_or_last_class == ' last' ) {
-                    $child_articles .= '</div>';
-                    $has_open_child_wrapper = false;
+                elseif ( $split_state['index'] == $split_state['count'] - 1 ) {
+                    $first_or_last_class = ' last';
                 }
-                continue;
+
+            } else {
+                $split_state = null;
             }
 
-            $template_name = $this->getTemplateToUse($article);
+            $post = $this->setup($art);
 
-            $child_articles .= $this->template_engine->renderArticle($template_name, -1, $article, $is_empty, $post, '', $first_or_last_class, $is_child_split);
+            if ( !$art->isPublished() ) {
+                $child_articles .= $this->getFutureArticleContent($art, $i, $post);
+            }
+            elseif( $art->isFileInclude() ) {
+                $child_articles .= '<div class="arlima-file-include teaser '.$first_or_last_class.
+                    ( $is_floating ? ' teaser-split':'').
+                    '">'.$this->includeArticleFile($art, -1).'</div>';
+            }
+            else {
+                $template_name = $this->getTemplateToUse($art);
+                $child_articles .= $this->template_engine->renderArticle($template_name, -1, $art, $post, '', $split_state);
+            }
 
             $count++;
+
             if( $has_open_child_wrapper && $first_or_last_class == ' last') {
                 $child_articles .= '</div>';
                 $has_open_child_wrapper = false;
             }
         }
 
-        if( $has_open_child_wrapper )
+        if( $has_open_child_wrapper ) {
             $child_articles .= '</div>';
+        }
 
         return $child_articles;
     }
 
     /**
-     * @param $article
+     * @param Arlima_Article $article
      * @return null|string
      */
     protected function getTemplateToUse($article)
     {
-        return empty($article['options']['template']) ? $this->default_template_name : $article['options']['template'];
+        return $article->opt('template', $this->default_template_name);
     }
 }

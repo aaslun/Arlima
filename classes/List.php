@@ -8,6 +8,7 @@
  */
 class Arlima_List
 {
+    const ERROR_PREVIEW_VERSION_NOT_FOUND = 99200;
 
     const STATUS_PREVIEW = 2;
     const STATUS_PUBLISHED = 1;
@@ -58,7 +59,7 @@ class Arlima_List
     /**
      * @var array
      */
-    private $versions = array();
+    private $version_history = array();
 
     /**
      * @var array
@@ -73,18 +74,12 @@ class Arlima_List
 
     /**
      * @var array
+     * @see Arlima_List::getDefaultOptions
      */
-    private $options = array(
-                'template' => 'article',
-                'pages_to_purge' => '',
-                'supports_sections' => "0", // translates to bool false
-                'allows_template_switching' => "1",
-                'before_title' => '<h2>',
-                'after_title' => '</h2>'
-            );
+    private $options = array();
 
     /**
-     * @var array
+     * @var Arlima_Article[]
      */
     private $articles = array();
 
@@ -100,9 +95,26 @@ class Arlima_List
      */
     function __construct($exists = false, $id = 0, $is_imported = false)
     {
+        $this->options = self::getDefaultListOptions();
         $this->exists = $exists;
         $this->is_imported = $is_imported;
         $this->id = $id;
+    }
+
+    /**
+     * @return array
+     */
+    static function getDefaultListOptions()
+    {
+        return array(
+            'template' => 'article',
+            'available_templates' => false, // not set meaning all will be available
+            'pages_to_purge' => '',
+            'supports_sections' => "0", // translates to bool false
+            'allows_template_switching' => "1",
+            'before_title' => '<h2>',
+            'after_title' => '</h2>'
+        );
     }
 
     /**
@@ -125,12 +137,42 @@ class Arlima_List
     }
 
     /**
-     * Tells whether or not this is a preview version
+     * Tells whether or not the list contains a preview version
      * @return bool
      */
     public function isPreview()
     {
         return $this->getStatus() == self::STATUS_PREVIEW;
+    }
+
+    /**
+     * Tells whether or not the list contains a scheduled version
+     * @return bool
+     */
+    public function isScheduled()
+    {
+        return $this->getStatus() == self::STATUS_SCHEDULED;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPublished()
+    {
+        return $this->getStatus() == self::STATUS_PUBLISHED;
+    }
+
+    /**
+     * Tells whether or not this list allows use of given template
+     * @param string $template
+     * @return bool
+     */
+    public function isAvailable($template)
+    {
+        if( $this->hasOption('available_templates') ) {
+            return in_array(basename($template), $this->getOption('available_templates'));
+        }
+        return true;
     }
 
     /**
@@ -173,19 +215,39 @@ class Arlima_List
 
     /**
      * A list with the latest created versions of this list
+     * @deprecated
      * @return array
      */
     public function getVersions()
     {
-        return $this->versions;
+        Arlima_Utils::warnAboutDeprecation(__METHOD__, 'Arlima_List::getPublishedVersions');
+        return $this->getPublishedVersions();
+    }
+
+    /**
+     * @deprecated
+     * @param array $versions
+     */
+    public function setVersions($versions)
+    {
+        Arlima_Utils::warnAboutDeprecation(__METHOD__, 'Arlima_List::setPublishedVersions');
+        $this->setPublishedVersions($versions);
     }
 
     /**
      * @param array $versions
      */
-    public function setVersions($versions)
+    public function setPublishedVersions($versions)
     {
-        $this->versions = $versions;
+        $this->version_history = $versions;
+    }
+
+    /**
+     * @return array
+     */
+    public function getPublishedVersions()
+    {
+        return $this->version_history;
     }
 
     /**
@@ -208,15 +270,29 @@ class Arlima_List
     public function setVersion($version_data)
     {
         $this->version = $version_data;
+        $this->status = $version_data['status'];
     }
 
     /**
-     * @param $name
+     * Get a list option (also has an aliased function named opt())
+     * @param string $name
+     * @param mixed $default
      * @return string|null
      */
-    public function getOption($name)
+    public function getOption($name, $default=null)
     {
-        return isset($this->options[$name]) ? $this->options[$name] : null;
+        return isset($this->options[$name]) ? $this->options[$name] : $default;
+    }
+
+    /**
+     * Alias for getOption($name, $default=null)
+     * @param $name
+     * @param $default
+     * @return string|null
+     */
+    public function opt($name, $default=null)
+    {
+        return $this->getOption($name, $default);
     }
 
     /**
@@ -244,6 +320,7 @@ class Arlima_List
      */
     public function id()
     {
+        Arlima_Utils::warnAboutDeprecation(__METHOD__, 'Arlima_List::getId');
         return $this->id;
     }
 
@@ -271,17 +348,18 @@ class Arlima_List
     public function getContainingPosts()
     {
         if( $this->post_ids === false ) {
-            $this->post_ids = array();
+            $posts = array();
             foreach($this->getArticles() as $article) {
-                if( !empty($article['post']) ) {
-                    $this->post_ids[] = $article['post'];
+                if( $post_id = $article->getPostId() ) {
+                    $posts[$post_id] = 1;
                 }
-                foreach ($article['children'] as $child) {
-                    if (!empty($child['post'])) {
-                        $this->post_ids[] = $child['post'];
+                foreach ($article->getChildArticles() as $child) {
+                    if ( $post_id = $child->getPostId() ) {
+                        $posts[$post_id] = 1;
                     }
                 }
             }
+            $this->post_ids = array_keys($posts);
         }
         return $this->post_ids;
     }
@@ -307,7 +385,7 @@ class Arlima_List
     }
 
     /**
-     * @return array
+     * @return Arlima_Article[]
      */
     public function getArticles()
     {
@@ -360,14 +438,6 @@ class Arlima_List
     public function getSlug()
     {
         return $this->slug;
-    }
-
-    /**
-     * @param int $status
-     */
-    public function setStatus($status)
-    {
-        $this->status = $status;
     }
 
     /**
@@ -424,7 +494,7 @@ class Arlima_List
      */
     public function getOptions()
     {
-        $this->options['hidden_templates'] = apply_filters('arlima_hidden_templates', array(), $this);
+        $this->options['hidden_templates'] = Arlima_CMSFacade::load()->applyFilters('arlima_hidden_templates', array(), $this);
         return $this->options;
     }
 
@@ -469,46 +539,13 @@ class Arlima_List
     }
 
     /**
-     * Returns info about the version of this list
-     * @param string $no_version_text[optional=''] The text returned if this is list is of no version
-     * @return string
-     */
-    function getVersionInfo($no_version_text = '')
-    {
-        if( $this->isImported() ) {
-            return sprintf(__('Last modified %s a go', 'arlima'), human_time_diff($this->version['created']));
-        } else {
-            $version = $this->version;
-            if ( isset($version['id']) && isset($version['user_id']) ) {
-                Arlima_Utils::loadTextDomain();
-                $user_data = get_userdata($version['user_id']);
-                $saved_since = '';
-                $saved_by = __('Unknown', 'arlima');
-                $lang_saved_since = __(' saved since ', 'arlima');
-                $lang_by = __(' by ', 'arlima');
-
-                if ( !empty($version['created']) ) {
-                    $saved_since = $lang_saved_since . human_time_diff($version['created']);
-                }
-                if ( $user_data ) {
-                    $saved_by = $user_data->display_name;
-                }
-
-                return 'v ' . $version['id'] . ' ' . $saved_since . $lang_by . $saved_by . ($this->is_imported ? ' (IMPORT)' : '');
-            } else {
-                return $no_version_text . ($this->is_imported ? ' (IMPORT)' : '');
-            }
-        }
-    }
-
-    /**
      * @return bool
      */
     function isLatestPublishedVersion()
     {
         return !$this->isPreview() &&
             isset($this->version['id']) &&
-            (empty($this->versions) || $this->versions[0]['id'] == $this->version['id']);
+            (empty($this->version_history) || $this->version_history[0]['id'] == $this->version['id']);
     }
 
     /**
@@ -518,10 +555,32 @@ class Arlima_List
     {
         $arr = array();
         foreach($this as $key => $val) {
-            if( $key !== 'preview' && $key != 'post_ids' )
+            if( $key !== 'preview' && $key != 'post_ids' && $key != 'articles') {
                 $arr[$key] = $val;
+            }
+        }
+
+        // Convert articles to arrays
+        $arr['articles'] = array();
+        foreach($this->getArticles() as $i => $art) {
+            $arr['articles'][$i] = $art->toArray();
+        }
+
+        // Backwards compat
+        $arr['versions'] = array();
+        foreach( $this->version_history as $ver ) {
+            $arr['versions'][] = $ver['id'];
         }
 
         return $arr;
     }
+
+    /**
+     * @return Arlima_ListBuilder
+     */
+    public static function builder()
+    {
+        return new Arlima_ListBuilder();
+    }
+
 }
