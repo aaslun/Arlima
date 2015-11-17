@@ -98,8 +98,9 @@
 | public | <strong>getCreationTime()</strong> : <em>int</em><br /><em>Get an unix timestamp (in seconds) of when the article was created</em> |
 | public | <strong>getId()</strong> : <em>int</em> |
 | public | <strong>getImageAlignment()</strong> : <em>string</em><br /><em>Get aligment of possibly connected image</em> |
+| public | <strong>getImageFilePath()</strong> : <em>string</em><br /><em>Returns path to image file if known (Remember that the article object may refer to an article on a remote website)</em> |
 | public | <strong>getImageId()</strong> : <em>int/string</em><br /><em>Get id of possibly connected image. Will return empty string if no images is attached to the article</em> |
-| public | <strong>getImageSize()</strong> : <em>string</em><br /><em>Get size name of possibly connected image</em> |
+| public | <strong>getImageSize()</strong> : <em>string</em><br /><em>Get size name of possibly connected image (full, half, third, quarter, fifth, sixth)</em> |
 | public | <strong>getImageURL()</strong> : <em>string</em><br /><em>Get the URL of article image. Returns empty string if not image is connected to the article</em> |
 | public | <strong>getParentIndex()</strong> : <em>int</em><br /><em>Will return -1 if the article does'nt have a parent article</em> |
 | public | <strong>getPostId()</strong> : <em>int</em><br /><em>Get id of possibly connected post</em> |
@@ -196,7 +197,7 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
 | public | <strong>abstract getPageIdBySlug(</strong><em>string</em> <strong>$slug</strong>)</strong> : <em>int/bool</em><br /><em>Get id of the page/post with given slug name</em> |
 | public | <strong>abstract getPostIDInLoop()</strong> : <em>int</em><br /><em>Get ID of the current post in</em> |
 | public | <strong>abstract getPostInGlobalScope()</strong> : <em>mixed</em> |
-| public | <strong>abstract getPostTimeStamp(</strong><em>int</em> <strong>$post_id</strong>)</strong> : <em>mixed</em><br /><em>Get publish time for the post/page with given id</em> |
+| public | <strong>abstract getPostTimeStamp(</strong><em>int</em> <strong>$post_id</strong>)</strong> : <em>int</em><br /><em>Get publish time for the post/page with given id</em> |
 | public | <strong>abstract getPostURL(</strong><em>mixed</em> <strong>$post_id</strong>)</strong> : <em>string</em><br /><em>Get URL for post/page with given id</em> |
 | public | <strong>abstract getQueriedPageId()</strong> : <em>int/bool</em><br /><em>Get id the page/post that currently is being visited</em> |
 | public | <strong>abstract getRelationData(</strong><em>int</em> <strong>$post_id</strong>)</strong> : <em>array</em><br /><em>Get information about possible relations between given post/page and Arlima lists</em> |
@@ -262,6 +263,8 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
 
 | Visibility | Function |
 |:-----------|:---------|
+| public | <strong>getURL()</strong> : <em>string</em> |
+| public | <strong>setURL(</strong><em>mixed</em> <strong>$url</strong>)</strong> : <em>void</em> |
 
 *This class extends \Exception*
 
@@ -304,6 +307,7 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
 | public static | <strong>builder()</strong> : <em>[\Arlima_ListBuilder](#class-arlima_listbuilder)</em> |
 | public | <strong>containsPost(</strong><em>int</em> <strong>$post_id</strong>)</strong> : <em>bool</em><br /><em>Tells whether or not this list contains one or more articles connected to the post with given id</em> |
 | public | <strong>exists()</strong> : <em>bool</em><br /><em>Tells whether or not this arlima list exists in the database</em> |
+| public | <strong>getArticle(</strong><em>mixed</em> <strong>$index</strong>)</strong> : <em>[\Arlima_Article](#class-arlima_article)</em><br /><em>Get article object at given index</em> |
 | public | <strong>getArticles()</strong> : <em>[\Arlima_Article](#class-arlima_article)[]</em> |
 | public | <strong>getContainingPosts()</strong> : <em>array</em><br /><em>Returns a list with id numbers of the posts that has a connection to one or more articles in this list</em> |
 | public | <strong>getCreated()</strong> : <em>int</em> |
@@ -387,7 +391,7 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
 | public | <strong>loadLatestPreview(</strong><em>int</em> <strong>$id</strong>)</strong> : <em>[\Arlima_List](#class-arlima_list)</em><br /><em>Load latest preview version of article list with given id.</em> |
 | public | <strong>loadList(</strong><em>int/string</em> <strong>$id</strong>, <em>bool/mixed</em> <strong>$version=false</strong>, <em>bool</em> <strong>$include_future_posts=false</strong>)</strong> : <em>[\Arlima_List](#class-arlima_list)</em><br /><em>Future posts will always be included in the list if you're loading a specific version of the list. Otherwise you can use the argument $include_future_posts to control if the list should contain future posts as well. Setting $include_future_posts to true will how ever disable the caching of the article data</em> |
 | public | <strong>loadListSlugs()</strong> : <em>array</em><br /><em>will return an array looking like array( stdClass(id => ... title => ... slug => ...) )</em> |
-| public | <strong>loadListsByArticleId(</strong><em>mixed</em> <strong>$post_id</strong>)</strong> : <em>array</em><br /><em>Loads an array with objects containing list id and options that have teasers that are linked to the post with $post_id</em> |
+| public | <strong>loadListsByArticleId(</strong><em>int</em> <strong>$post_id</strong>)</strong> : <em>array</em><br /><em>Loads an array with objects containing list id and options that have teasers that are linked to the post with $post_id</em> |
 | public static | <strong>postToArlimaArticle(</strong><em>mixed</em> <strong>$post</strong>, <em>mixed/string/null</em> <strong>$text=null</strong>, <em>array</em> <strong>$override=array()</strong>)</strong> : <em>array</em><br /><em>Takes a post and returns an Arlima article object</em> |
 | public | <strong>saveNewListVersion(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>, <em>mixed</em> <strong>$articles</strong>, <em>mixed</em> <strong>$user_id</strong>, <em>int</em> <strong>$schedule_time</strong>, <em>bool</em> <strong>$preview=false</strong>)</strong> : <em>int</em> |
 | public | <strong>uninstall()</strong> : <em>void</em><br /><em>Removes the database tables created when plugin was installed</em> |
@@ -441,7 +445,7 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
 | public | <strong>addPreviewArticles(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>)</strong> : <em>void</em><br /><em>Add articles and version of latest preview version to given list object</em> |
 | public | <strong>addVersionHistory(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>)</strong> : <em>array</em><br /><em>Add version history data to list and return an array with all published versions</em> |
 | public | <strong>clear(</strong><em>int</em> <strong>$version_id</strong>)</strong> : <em>void</em><br /><em>Removes all articles in a version.</em> |
-| public | <strong>create(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>, <em>array</em> <strong>$articles</strong>, <em>int</em> <strong>$user_id</strong>, <em>bool</em> <strong>$preview=false</strong>)</strong> : <em>mixed</em> |
+| public | <strong>create(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>, <em>array</em> <strong>$articles</strong>, <em>int</em> <strong>$user_id</strong>, <em>bool</em> <strong>$preview=false</strong>)</strong> : <em>int</em> |
 | public static | <strong>createArticle(</strong><em>array</em> <strong>$override=array()</strong>)</strong> : <em>[\Arlima_Article](#class-arlima_article)</em><br /><em>The article data is in fact created with javascript in front-end so you can't see this function as the sole creator of article objects. For that reason it might be good to take look at this function once in a while, making sure it generates a similar object as generated with javascript in front-end.</em> |
 | public | <strong>createDatabaseTables()</strong> : <em>void</em> |
 | public | <strong>createScheduledVersion(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>, <em>array</em> <strong>$articles</strong>, <em>int</em> <strong>$user_id</strong>, <em>int</em> <strong>$schedule_time</strong>)</strong> : <em>int</em> |
@@ -456,7 +460,7 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
 | public | <strong>updateArticlePublishDate(</strong><em>int</em> <strong>$time</strong>, <em>int</em> <strong>$post_id</strong>)</strong> : <em>void</em><br /><em>Updates publish date for all arlima articles related to given post and clears the cache of the lists where they appear</em> |
 | public | <strong>updateDatabaseTables(</strong><em>\float</em> <strong>$currently_installed_version</strong>)</strong> : <em>void</em> |
 | public | <strong>versionBelongsToList(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>, <em>int</em> <strong>$version_id</strong>)</strong> : <em>bool</em> |
-| protected | <strong>toArray(</strong><em>array/[\Arlima_Article](#class-arlima_article)[]</em> <strong>$articles</strong>)</strong> : <em>mixed</em><br /><em>Convert from articles from objects to arrays and update possibly changed published date of articles</em> |
+| protected | <strong>toArrayWithUpdatedPublishDate(</strong><em>array/[\Arlima_Article](#class-arlima_article)[]</em> <strong>$articles</strong>)</strong> : <em>mixed</em><br /><em>Get an array containing all given articles, converted from objects to arrays. The publish date of each article will also be updated with the publish date of possibly connected post</em> |
 ###### Examples of Arlima_ListVersionRepository::updateArticle()
 ```php
 <?php
@@ -502,7 +506,6 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
      $renderer->setDisplayPostCallback(function($article_counter, $article, $post, $list) {
   return '...';
      });
-
      $renderer->renderList();
 ````
 
@@ -678,55 +681,55 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
 | Visibility | Function |
 |:-----------|:---------|
 | public | <strong>__construct(</strong><em>mixed/null</em> <strong>$wpdb=null</strong>)</strong> : <em>void</em> |
-| public | <strong>applyFilters()</strong> : <em>mixed</em><br /><em>Filter data</em> |
-| public | <strong>currentVisitorCanEdit()</strong> : <em>bool</em><br /><em>Tells whether or not current website visitor can edit pages/posts</em> |
-| public | <strong>dbEscape(</strong><em>string</em> <strong>$input</strong>)</strong> : <em>string</em><br /><em>Make string safe for use in a database query</em> |
-| public | <strong>dbTableExists(</strong><em>string</em> <strong>$tbl</strong>)</strong> : <em>bool</em> |
-| public | <strong>doAction()</strong> : <em>mixed</em><br /><em>Invoke a system event</em> |
-| public | <strong>flushCaches()</strong> : <em>void</em><br /><em>Flush all caches affecting arlima</em> |
-| public | <strong>generateImageVersion(</strong><em>string</em> <strong>$file</strong>, <em>string</em> <strong>$attach_url</strong>, <em>int</em> <strong>$max_width</strong>, <em>int</em> <strong>$img_id</strong>)</strong> : <em>string</em><br /><em>Generate an image version of given file with given max width (resizing image). Returns the $attach_url if not possible to create image version</em> |
-| public | <strong>getArlimaArticleImageFromPost(</strong><em>mixed</em> <strong>$id</strong>)</strong> : <em>array/bool</em><br /><em>Get an array with 'attachmend' being image id, 'alignment', 'sizename' and 'url' of the image that is related to the post/page with given id. Returns false if no image exists</em> |
-| public | <strong>getBaseURL()</strong> : <em>string</em><br /><em>Get base URL of the website that the CMS provides</em> |
-| public | <strong>getContentOfPostInGlobalScope()</strong> : <em>string</em> |
-| public | <strong>getDBPrefix()</strong> : <em>string</em><br /><em>Get the prefix used in database table names</em> |
-| public | <strong>getDefaultListAttributes()</strong> : <em>array</em> |
-| public | <strong>getExcerpt(</strong><em>int</em> <strong>$post_id</strong>, <em>mixed/int</em> <strong>$excerpt_length=35</strong>, <em>string</em> <strong>$allowed_tags=`''`</strong>)</strong> : <em>string</em><br /><em>Get the excerpt of a post/page</em> |
-| public | <strong>getFileURL(</strong><em>string</em> <strong>$file</strong>)</strong> : <em>string</em><br /><em>Get URL of a file that resides within the directory of the CMS</em> |
-| public | <strong>getImageData(</strong><em>int</em> <strong>$img_id</strong>)</strong> : <em>array</em><br /><em>Get an array with info (height, width, file path) about image with given id</em> |
+| public | <strong>applyFilters()</strong> : <em>void</em> |
+| public | <strong>currentVisitorCanEdit()</strong> : <em>void</em> |
+| public | <strong>dbEscape(</strong><em>mixed</em> <strong>$input</strong>)</strong> : <em>void</em> |
+| public | <strong>dbTableExists(</strong><em>mixed</em> <strong>$tbl</strong>)</strong> : <em>void</em> |
+| public | <strong>doAction()</strong> : <em>void</em> |
+| public | <strong>flushCaches()</strong> : <em>void</em> |
+| public | <strong>generateImageVersion(</strong><em>mixed</em> <strong>$file</strong>, <em>mixed</em> <strong>$attach_url</strong>, <em>mixed</em> <strong>$max_width</strong>, <em>mixed</em> <strong>$img_id</strong>)</strong> : <em>void</em> |
+| public | <strong>getArlimaArticleImageFromPost(</strong><em>mixed</em> <strong>$id</strong>)</strong> : <em>mixed</em> |
+| public | <strong>getBaseURL()</strong> : <em>mixed</em> |
+| public | <strong>getContentOfPostInGlobalScope()</strong> : <em>mixed</em> |
+| public | <strong>getDBPrefix()</strong> : <em>mixed</em> |
+| public | <strong>getDefaultListAttributes()</strong> : <em>mixed</em> |
+| public | <strong>getExcerpt(</strong><em>mixed</em> <strong>$post_id</strong>, <em>mixed</em> <strong>$excerpt_length=35</strong>, <em>string</em> <strong>$allowed_tags=`''`</strong>)</strong> : <em>mixed</em> |
+| public | <strong>getFileURL(</strong><em>mixed</em> <strong>$file</strong>)</strong> : <em>mixed</em> |
+| public | <strong>getImageData(</strong><em>mixed</em> <strong>$img_id</strong>)</strong> : <em>mixed</em> |
 | public | <strong>getImageURL(</strong><em>mixed</em> <strong>$img_id</strong>)</strong> : <em>mixed</em> |
-| public | <strong>getImportedLists()</strong> : <em>array</em><br /><em>An array with URL:s of external lists</em> |
-| public | <strong>getListEditURL(</strong><em>int</em> <strong>$id</strong>)</strong> : <em>string</em><br /><em>Get URL of where arlima list with given id can be edited by an administrator</em> |
-| public | <strong>getPageEditURL(</strong><em>int</em> <strong>$page_id</strong>)</strong> : <em>string</em><br /><em>Get URL of where post/page with given id can be edited by an administrator</em> |
-| public | <strong>getPageIdBySlug(</strong><em>string</em> <strong>$slug</strong>)</strong> : <em>int/bool</em><br /><em>Get id of the page/post with given slug name</em> |
+| public | <strong>getImportedLists()</strong> : <em>mixed</em> |
+| public | <strong>getListEditURL(</strong><em>mixed</em> <strong>$id</strong>)</strong> : <em>mixed</em> |
+| public | <strong>getPageEditURL(</strong><em>mixed</em> <strong>$page_id</strong>)</strong> : <em>mixed</em> |
+| public | <strong>getPageIdBySlug(</strong><em>mixed</em> <strong>$slug</strong>)</strong> : <em>mixed</em> |
 | public | <strong>getPostIDInLoop()</strong> : <em>mixed</em> |
-| public | <strong>getPostInGlobalScope()</strong> : <em>bool/mixed</em> |
-| public | <strong>getPostTimeStamp(</strong><em>mixed</em> <strong>$p</strong>)</strong> : <em>mixed</em><br /><em>Get publish time for the post with given id</em> |
-| public | <strong>getPostURL(</strong><em>int</em> <strong>$post_id</strong>)</strong> : <em>string</em><br /><em>Get URL for post/page with given id</em> |
-| public | <strong>getQueriedPageId()</strong> : <em>int/bool</em><br /><em>Get id the page/post that currently is being visited</em> |
-| public | <strong>getRelationData(</strong><em>int</em> <strong>$post_id</strong>)</strong> : <em>array</em><br /><em>Get information about possible relations between given post/page and Arlima lists</em> |
+| public | <strong>getPostInGlobalScope()</strong> : <em>mixed</em> |
+| public | <strong>getPostTimeStamp(</strong><em>mixed</em> <strong>$p</strong>)</strong> : <em>mixed</em> |
+| public | <strong>getPostURL(</strong><em>mixed</em> <strong>$post_id</strong>)</strong> : <em>mixed</em> |
+| public | <strong>getQueriedPageId()</strong> : <em>mixed</em> |
+| public | <strong>getRelationData(</strong><em>mixed</em> <strong>$post_id</strong>)</strong> : <em>mixed</em> |
 | public | <strong>havePostsInLoop()</strong> : <em>bool</em> |
-| public | <strong>humanTimeDiff(</strong><em>int</em> <strong>$time</strong>)</strong> : <em>string</em><br /><em>Get a human readable string explaining how long ago given time is, or how much time there's left until the time takes place</em> |
+| public | <strong>humanTimeDiff(</strong><em>mixed</em> <strong>$time</strong>)</strong> : <em>void</em> |
 | public static | <strong>initLocalization()</strong> : <em>void</em> |
-| public | <strong>isPreloaded(</strong><em>int</em> <strong>$id</strong>)</strong> : <em>bool</em><br /><em>Tells whether or not a page/post with given id is preloaded</em> |
-| public | <strong>loadExternalURL(</strong><em>string</em> <strong>$url</strong>)</strong> : <em>array</em><br /><em>Load the contents of an external URL. This function returns an array with  'headers', 'body', 'response', 'cookies', 'filename' if request was successful, or throws an Exception if failed</em> |
-| public | <strong>loadRelatedPages(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>)</strong> : <em>array</em><br /><em>Get an array with all pages that give list is related to</em> |
-| public | <strong>loadRelatedWidgets(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>)</strong> : <em>array</em><br /><em>Returns an array with info about widgets that's related to the list</em> |
-| public | <strong>postToArlimaArticle(</strong><em>int/object</em> <strong>$post</strong>, <em>array</em> <strong>$override=array()</strong>)</strong> : <em>[\Arlima_Article](#class-arlima_article)</em> |
+| public | <strong>isPreloaded(</strong><em>mixed</em> <strong>$id</strong>)</strong> : <em>bool</em> |
+| public | <strong>loadExternalURL(</strong><em>mixed</em> <strong>$url</strong>)</strong> : <em>mixed</em> |
+| public | <strong>loadRelatedPages(</strong><em>mixed</em> <strong>$list</strong>)</strong> : <em>mixed</em> |
+| public | <strong>loadRelatedWidgets(</strong><em>mixed</em> <strong>$list</strong>)</strong> : <em>mixed</em> |
+| public | <strong>postToArlimaArticle(</strong><em>mixed</em> <strong>$post</strong>, <em>array</em> <strong>$override=array()</strong>)</strong> : <em>void</em> |
 | public | <strong>preLoadPosts(</strong><em>mixed</em> <strong>$post_ids</strong>)</strong> : <em>void</em> |
-| public | <strong>prepare(</strong><em>string</em> <strong>$sql</strong>, <em>array</em> <strong>$params</strong>)</strong> : <em>mixed</em><br /><em>Prepare an SQL-statement.</em> |
+| public | <strong>prepare(</strong><em>mixed</em> <strong>$sql</strong>, <em>mixed</em> <strong>$params</strong>)</strong> : <em>void</em> |
 | public | <strong>prepareForPostLoop(</strong><em>mixed</em> <strong>$list</strong>)</strong> : <em>void</em> |
-| public | <strong>relate(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>, <em>int</em> <strong>$post_id</strong>, <em>array</em> <strong>$attr</strong>)</strong> : <em>void</em><br /><em>Relate an Arlima list with a post/page</em> |
-| public | <strong>removeAllRelations(</strong><em>[\Arlima_List](#class-arlima_list)</em> <strong>$list</strong>)</strong> : <em>void</em><br /><em>Remove relations made between pages and given list</em> |
-| public | <strong>removeImportedList(</strong><em>string</em> <strong>$url</strong>)</strong> : <em>void</em> |
-| public | <strong>removeRelation(</strong><em>mixed</em> <strong>$post_id</strong>)</strong> : <em>void</em><br /><em>Remove possible relation this post/page might have with an Arlima list</em> |
+| public | <strong>relate(</strong><em>mixed</em> <strong>$list</strong>, <em>mixed</em> <strong>$post_id</strong>, <em>mixed</em> <strong>$attr</strong>)</strong> : <em>void</em> |
+| public | <strong>removeAllRelations(</strong><em>mixed</em> <strong>$list</strong>)</strong> : <em>void</em> |
+| public | <strong>removeImportedList(</strong><em>mixed</em> <strong>$url</strong>)</strong> : <em>void</em> |
+| public | <strong>removeRelation(</strong><em>mixed</em> <strong>$post_id</strong>)</strong> : <em>void</em> |
 | public | <strong>resetAfterPostLoop()</strong> : <em>void</em> |
-| public | <strong>resolveFilePath(</strong><em>string</em> <strong>$path</strong>, <em>bool</em> <strong>$relative=false</strong>)</strong> : <em>bool/string</em><br /><em>Returns the file path if it resides within the directory of the CMS.</em> |
-| public | <strong>runSQLQuery(</strong><em>string</em> <strong>$sql</strong>)</strong> : <em>mixed</em><br /><em>Calls a method on DB and throws Exception if db error occurs</em> |
-| public | <strong>sanitizeText(</strong><em>string</em> <strong>$txt</strong>, <em>string</em> <strong>$allowed=`''`</strong>)</strong> : <em>string</em><br /><em>Sanitize text from CMS specific tags/code as well as ordinary html tags. Use $allowed to tell which tags that should'nt become removed</em> |
-| public | <strong>saveImportedLists(</strong><em>array</em> <strong>$lists</strong>)</strong> : <em>mixed</em><br /><em>Save an array with URL:s of external lists that should be available in the list manager</em> |
-| public | <strong>scheduleEvent(</strong><em>int</em> <strong>$schedule_time</strong>, <em>string</em> <strong>$event</strong>, <em>mixed</em> <strong>$args</strong>)</strong> : <em>void</em><br /><em>Schedule an event to take place in the future</em> |
+| public | <strong>resolveFilePath(</strong><em>mixed</em> <strong>$path</strong>, <em>bool</em> <strong>$relative=false</strong>)</strong> : <em>void</em> |
+| public | <strong>runSQLQuery(</strong><em>mixed</em> <strong>$sql</strong>)</strong> : <em>void</em> |
+| public | <strong>sanitizeText(</strong><em>mixed</em> <strong>$txt</strong>, <em>string</em> <strong>$allowed=`''`</strong>)</strong> : <em>void</em> |
+| public | <strong>saveImportedLists(</strong><em>mixed</em> <strong>$lists</strong>)</strong> : <em>void</em> |
+| public | <strong>scheduleEvent(</strong><em>mixed</em> <strong>$schedule_time</strong>, <em>mixed</em> <strong>$event</strong>, <em>mixed</em> <strong>$args</strong>)</strong> : <em>void</em> |
 | public | <strong>setPostInGlobalScope(</strong><em>mixed</em> <strong>$post</strong>)</strong> : <em>void</em> |
-| public | <strong>translate(</strong><em>mixed</em> <strong>$str</strong>)</strong> : <em>string</em><br /><em>Translate current string</em> |
+| public | <strong>translate(</strong><em>mixed</em> <strong>$str</strong>)</strong> : <em>void</em> |
 
 *This class implements [\Arlima_CMSInterface](#interface-arlima_cmsinterface)*
 
@@ -743,6 +746,7 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
 | public | <strong>getVersions(</strong><em>mixed/array/null</em> <strong>$meta=null</strong>, <em>bool</em> <strong>$as_url=false</strong>)</strong> : <em>array</em><br /><em>Get paths to all generated arlima version</em> |
 | public static | <strong>registerFilters()</strong> : <em>void</em><br /><em>Removes all generated versions when attachments gets deleted</em> |
 | public static | <strong>removeVersions(</strong><em>mixed/int</em> <strong>$attach_id=null</strong>)</strong> : <em>void</em><br /><em>Removes all image versions created for given attachment</em> |
+| public static | <strong>uploadDirData(</strong><em>mixed/string</em> <strong>$key=null</strong>)</strong> : <em>array</em> |
 
 <hr /> 
 ### Class: Arlima_WP_Page_Edit
@@ -816,6 +820,7 @@ isInScheduledInterval('*:*'); // All days of the week and all hours of the day
 | public | <strong>adminMenu()</strong> : <em>void</em><br /><em>Creates the menu in wp-admin for this plugin</em> |
 | public | <strong>arlimaListShortCode(</strong><em>array</em> <strong>$attr</strong>)</strong> : <em>string</em><br /><em>Short code for arlima</em> |
 | public | <strong>attachmentMetaBox()</strong> : <em>void</em><br /><em>Outputs HTML content of arlima versions meta box</em> |
+| public static | <strong>bodyClassFilter(</strong><em>array</em> <strong>$classes</strong>)</strong> : <em>void</em> |
 | public static | <strong>classLoader(</strong><em>string</em> <strong>$class</strong>)</strong> : <em>void</em><br /><em>Class loader that either tries to load the class from arlima class directory or template engine directory</em> |
 | public | <strong>commonInitHook()</strong> : <em>void</em><br /><em>Init hook taking place in both wp-admin and theme</em> |
 | public static | <strong>deactivate()</strong> : <em>void</em><br /><em>Deactivation procedure for this plugin - Removes feed from wp_rewrite</em> |
