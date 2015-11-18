@@ -205,8 +205,8 @@ var ArlimaBackend = (function($, ArlimaUtils, ArlimaJS) {
          * @param {Number} attachId
          * @param {Function} [callback]
          */
-        duplicateImage : function(attachId, callback) {
-            this._ajax('arlima_duplicate_image', {attachment:attachId}, callback);
+        duplicateImage : function(attachId, url, callback) {
+            this._ajax('arlima_duplicate_image', {attachment:attachId, file:url}, callback);
         },
 
         /**

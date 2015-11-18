@@ -163,7 +163,7 @@ class Arlima_WP_Ajax
     {
         $this->initAjaxRequest();
         try {
-            $attachment_id = intval($_POST['attachment']);
+            $attachment_id = apply_filters('arlima_duplicate_image_attachment', intval($_POST['attachment']));
             if ( $attachment_id ) {
                 $file = get_post_meta( $attachment_id, '_wp_attached_file', true );
                 if( $file ) {
