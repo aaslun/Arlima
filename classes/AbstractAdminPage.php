@@ -5,21 +5,21 @@
  *
  * Using this class reduces the amount of code that needs to be written when
  * wanting to have several admin pages in a plugin. It also reduces code
- * duplication that often appears when having several admin pages in one plugin.
+ * duplication that appears when having several admin pages in one plugin.
  *
  * @since 2.7
  * @package Arlima
  */
-abstract class Arlima_WP_AbstractAdminPage {
+abstract class Arlima_AbstractAdminPage {
 
     /**
-     * @var Arlima_WP_Plugin
+     * @var Arlima_Plugin
      */
     protected $plugin;
 
 
     /**
-     * @param Arlima_WP_Plugin $arlima_plugin
+     * @param Arlima_Plugin $arlima_plugin
      */
     final public function __construct($arlima_plugin)
     {
@@ -27,7 +27,7 @@ abstract class Arlima_WP_AbstractAdminPage {
     }
 
     /**
-     * @param Arlima_WP_Plugin
+     * @param \Arlima_Plugin $plugin
      */
     public function setPlugin($plugin)
     {
@@ -35,7 +35,7 @@ abstract class Arlima_WP_AbstractAdminPage {
     }
 
     /**
-     * @return Arlima_WP_Plugin
+     * @return \Arlima_Plugin
      */
     public function getPlugin()
     {
@@ -156,7 +156,7 @@ abstract class Arlima_WP_AbstractAdminPage {
         $styles = $this->styleSheets();
         if( ARLIMA_COMPILE_LESS_IN_BROWSER ) { // The second constant makes it possible to use the compiled css event though we're in dev-mode
             unset($styles['arlima_css']);
-            add_action('admin_head', 'Arlima_WP_AbstractAdminPage::outputLessJS');
+            add_action('admin_head', 'Arlima_AbstractAdminPAge::outputLessJS');
         }
 
         foreach($styles as $handle => $data) {
@@ -191,12 +191,11 @@ abstract class Arlima_WP_AbstractAdminPage {
                 'imageURL' => ARLIMA_PLUGIN_URL . 'images/',
                 'baseURL' => get_bloginfo('url'),
                 'pluginURL' => ARLIMA_PLUGIN_URL,
-                'hasScissors' => Arlima_WP_Plugin::isScissorsInstalled(),
+                'hasScissors' => Arlima_Plugin::isScissorsInstalled(),
                 'isAdmin' => current_user_can('manage_options'),
                 'devMode' => ARLIMA_DEV_MODE,
                 'allowEditorsCreateSections' => $this->plugin->getSetting('editor_sections', true) ? true:false,
-                'limitAccessToLists' => $this->plugin->getSetting('limit_access_to_lists', true) ? true:false,
-                'userAllowedLists' => get_user_meta( get_current_user_id(), 'arlima_allowed_lists', true),
+                'groupChildArticles' => ARLIMA_GROUP_CHILD_ARTICLES,
                 'sectionDivsSupportTemplate' => ARLIMA_SUPPORT_SECTION_DIV_TEMPLATES,
                 'previewQueryArg' => Arlima_List::QUERY_ARG_PREVIEW,
                 'sendJSErrorsToServerLog' => ARLIMA_SEND_JS_ERROR_TO_LOG,
@@ -260,7 +259,7 @@ abstract class Arlima_WP_AbstractAdminPage {
         <div class="wrap arlima <?php echo $this->slug() ?>">
             <h2 class="arlima-page-title">
                 <img src="<?php echo ARLIMA_PLUGIN_URL.'/images/logo.png' ?>" width="142" alt="Arlima" />
-                <?php if($this->slug() != Arlima_WP_Page_Main::PAGE_SLUG): ?>
+                <?php if($this->slug() != Arlima_Page_Main::PAGE_SLUG): ?>
                     <span>| <?php echo $this->getMenuName() ?></span>
                 <?php endif; ?>
             </h2>

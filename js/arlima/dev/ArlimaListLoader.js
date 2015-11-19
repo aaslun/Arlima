@@ -19,7 +19,7 @@ var ArlimaListLoader = (function($, window, ArlimaBackend, ArlimaJS) {
                 if(json && json.exists) {
 
                     var hasChanged = true;
-                    if( json.version && !json.isImported ) {
+                    if( json.version ) {
                         json.version.scheduled = parseInt(json.version.scheduled, 10);
                         if( !version && list && json.version.id == list.data.version.id && !list.hasUnsavedChanges() ) {
                             hasChanged = window.JSON.stringify(json.scheduledVersions || {}) != window.JSON.stringify(list.data.scheduledVersions || {});
@@ -35,9 +35,8 @@ var ArlimaListLoader = (function($, window, ArlimaBackend, ArlimaJS) {
                             json.loadedVersion = json.version.id;
                             json.version = list.data.version;
                         }
-                        if( hasChanged ) {
+                        if( hasChanged )
                             list.setData(json);
-                        }
                     }
 
                     if( hasChanged )
@@ -80,14 +79,12 @@ var ArlimaListLoader = (function($, window, ArlimaBackend, ArlimaJS) {
          */
         addListToContainer : function(listID) {
             if( listID ) {
-                var container = window.ArlimaListContainer;
-                if( listID in container.lists ) {
-                    container.focus(container.lists[listID]);
-                    ArlimaUtils.shake(container.lists[listID]);
+                if( listID in window.ArlimaListContainer.lists ) {
+                    ArlimaUtils.shake(window.ArlimaListContainer.lists[listID]);
                 } else {
                     _this.load(listID, function(list) {
                         if( list ) {
-                            container.add(list, {
+                            window.ArlimaListContainer.add(list, {
                                 left : '25px',
                                 top: '25px',
                                 width: '300px',

@@ -1,9 +1,4 @@
 
-.article {
-  clear: both;
-}
-
-
 @blue: #3f8fb4;
 @yellow: #e1b621;
 @dark_yellow: #997e18;
@@ -93,7 +88,7 @@ img.schedule-clock {
   padding-right: 5px;
 }
 
-.notice {
+.arlima-notice {
   font-weight: bold;
   color: @yellow;
 }
@@ -172,29 +167,28 @@ img.schedule-clock {
 }
 
 
-.scroll-window {
-  width: 100%;
-  max-width: none;
+#export-list {
   background: #F2F2F2;
   border: #E2E2E2 solid 1px;
   height: 200px;
   overflow-x: hidden;
   overflow-y: scroll;
+  max-width: 65%;
 }
 
-.scroll-window p {
+#export-list p {
   padding: 8px 12px;
   border-bottom: #E2E2E2 solid 1px;
   border-top: #FFF solid 1px;
-  margin: 0 !important;
+  margin: 0;
   line-height: 160%;
 }
 
-.scroll-window p:first-child {
+#export-list p:first-child {
   border-top: 0;
 }
 
-.scroll-window p input {
+#export-list p input {
   margin-right: 4px;
 }
 
@@ -205,7 +199,7 @@ img.schedule-clock {
   }
 }
 
-.scroll-window .gray-small {
+#export-list .gray-small {
   display: block;
 }
 
@@ -215,12 +209,6 @@ img.schedule-clock {
 */
 
 .wrap.arlima.arlima-edit {
-
-  p.small {
-    color :#777;
-    font-weight: normal;
-  }
-
   .tablenav {
     width: 600px;
     text-align: right;

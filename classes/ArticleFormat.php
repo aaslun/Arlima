@@ -16,11 +16,10 @@ class Arlima_ArticleFormat
     private static $formats = array();
 
     /**
-     * Register a format name that should be accessible in the list manager when editing an article (see https://github.com/victorjonsson/Arlima/wiki/Article-formats)
+     * @see arlima_register_format()
      * @param string $class
      * @param string $label
      * @param array $templates
-     * @param string $ui_color
      */
     public static function add($class, $label, $templates = array(), $ui_color='')
     {
@@ -29,7 +28,6 @@ class Arlima_ArticleFormat
     }
 
     /**
-     * Get all formats registered up to this point
      * @return array
      */
     public static function getAll()
@@ -38,7 +36,6 @@ class Arlima_ArticleFormat
     }
 
     /**
-     * Remove a registered format
      * @param string $class
      * @param array $templates
      */

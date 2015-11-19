@@ -3,8 +3,7 @@
 
 /**
  * Class working as a container from where you can get or set
- * rules that modifies a search form using WP_Query. (Maybe this class should
- * reside within the WP namespace...)
+ * rules that modifies a search form using WP_Query
  *
  * @package Arlima
  * @since 2.2
@@ -40,7 +39,7 @@ class Arlima_PostSearchModifier
     private static function runAction()
     {
         if ( !self::$search_action_has_fired ) {
-            Arlima_CMSFacade::load()->doAction('arlima_post_search'); // Let theme or plugins modify this search form
+            do_action('arlima_post_search'); // Let theme or plugins modify this search form
             self::$search_action_has_fired = true;
         }
     }

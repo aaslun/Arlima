@@ -55,7 +55,7 @@ the list that you created on step 2.
 #### Contributer manual
 
 - [Install, configure and build](https://github.com/victorjonsson/Arlima/wiki/Install,-configure-and-build)
-- [Server-side, in depth](https://github.com/victorjonsson/Arlima/wiki/Server-side,-in-depth)
+- Server-side, in depth
 - [Front-end, in depth](https://github.com/victorjonsson/Arlima/wiki/Front-end,-in-depth)
 
 #### Misc
@@ -70,10 +70,10 @@ the list that you created on step 2.
 - http://www.vk.se/
 - http://norran.se/
 - http://www.folkbladet.nu/
-- http://esport.aftonbladet.se/
+- http://magazin24.se/
 - http://lifesciencesweden.se/
 - http://malarnasfacktidning.se/
 - http://tidningenelektrikern.se/
-- http://www.skolporten.se/
+- http://orebrotribune.se/
 - http://handelstrender.se/
-- http://magazin24.se/
+- http://esport.aftonbladet.se/

@@ -7,13 +7,13 @@
  * @example
  *  <code>
  *  <?php
- *      $list = Arlima_List::builder()->slug('frontpage')->build();
- *      $renderer = new Arlima_SimpleListRenderer($list);
- *      $renderer->setDisplayPostCallback(function($article_counter, $article, $post, $list) {
- *          return '...';
- *      });
+ *  $list = $list_factory->loadListBySlug('my-arlima-list');
+ *  $renderer = new Arlima_SimpleListRenderer($list);
+ *  $renderer->setDisplayPostCallback(function($article_counter, $article, $post, $list) {
+ *      return '...';
+ *  });
  *
- *      $renderer->renderList();
+ *  $renderer->renderList();
  *  </code>
  *
  * @package Arlima
@@ -44,14 +44,14 @@ class Arlima_SimpleListRenderer extends Arlima_AbstractListRenderingManager
 
     /**
      * @param int $article_counter
-     * @param Arlima_Article $article
+     * @param array $article
      * @param WP_Post|bool $post
      * @param Arlima_AbstractListRenderingManager $renderer
      * @param bool $echo
      * @return string
      */
     public static function defaultPostDisplayCallback($article_counter, $article, $post, $renderer, $echo) {
-        return '<p>No callback given for article '.$article->getTitle().'</p>';
+        return '<p>No callback given for article' . ($post ? '(post &quot;'.$post->post_title.'&quot;' : '').'</p>';
     }
 
     /**
@@ -64,10 +64,10 @@ class Arlima_SimpleListRenderer extends Arlima_AbstractListRenderingManager
 
     /**
      * @see Arlima_SimpleListRendered::setDisplayPostCallback()
-     * @param bool $echo_output
+     * @param bool $output
      * @return string
      */
-    function generateListHtml($echo_output = true)
+    function generateListHtml($output = true)
     {
         $content = '';
         $article_counter = 0;
@@ -75,7 +75,7 @@ class Arlima_SimpleListRenderer extends Arlima_AbstractListRenderingManager
 
             list($index, $article_content) = $this->renderArticle($article, $article_counter);
 
-            if( $echo_output ) {
+            if( $output ) {
                 echo $article_content;
             } else {
                 $content .= $article_content;
@@ -91,13 +91,14 @@ class Arlima_SimpleListRenderer extends Arlima_AbstractListRenderingManager
     }
 
     /**
-     * @param Arlima_Article $article
+     * @param array $article_data
      * @param int $index
      * @param null|stdClass|WP_Post $post
+     * @param $is_empty
      * @return mixed
      */
-    protected function generateArticleHtml($article, $index, $post)
+    protected function generateArticleHtml($article_data, $index, $post, $is_empty)
     {
-        return call_user_func($this->display_article_callback, $index, $article, $post, $this);
+        return call_user_func($this->display_article_callback, $index, $article_data, $post, $this);
     }
 }

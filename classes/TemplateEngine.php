@@ -8,18 +8,13 @@
  * @package Arlima
  * @since 3.0
  */
-class Arlima_TemplateEngine implements Arlima_TemplateEngineInterface
+class Arlima_TemplateEngine
 {
 
     /**
      * @var Mustache_Template[]
      */
     private static $preloaded_templates = array();
-
-    /**
-     * @var array
-     */
-    private static $not_found_templates = array();
 
     /**
      * @var Mustache_Engine
@@ -45,7 +40,7 @@ class Arlima_TemplateEngine implements Arlima_TemplateEngineInterface
      * Factory method for creating instances of the template engine
      * @param Arlima_List $list
      * @param null|string $template_path
-     * @return Arlima_TemplateEngineInterface
+     * @return Arlima_TemplateEngine
      */
     public static function create($list, $template_path = null)
     {
@@ -71,21 +66,16 @@ class Arlima_TemplateEngine implements Arlima_TemplateEngineInterface
     }
 
     /**
-     * @param string $template_name
-     * @param int $article_counter
-     * @param Arlima_Article $article
-     * @param object $post
-     * @param string $child_articles
-     * @param bool $child_split_state
      * @return string
      */
-    function renderArticle($template_name, $article_counter, $article, $post, $child_articles='', $child_split_state=false)
+    function renderArticle($template_name, $article_counter, $article, $is_empty, $post, $child_articles='', $is_child_split=false)
     {
-        $this->template_obj_creator->setIsChild( $article->isChild() );
-        $this->template_obj_creator->setChildSplitState($child_split_state);
+        $this->template_obj_creator->setIsChild( (int)$article['parent'] > -1 );
+        $this->template_obj_creator->setIsChildSplit($is_child_split);
 
         $template_obj = $this->template_obj_creator->create(
                                 $article,
+                                $is_empty,
                                 $post,
                                 $article_counter,
                                 $template_name
@@ -94,7 +84,6 @@ class Arlima_TemplateEngine implements Arlima_TemplateEngineInterface
         if ( !empty($child_articles) ) {
             $template_obj['child_articles'] = $child_articles;
         }
-
 
         return $this->render($template_obj, $template_name);
     }
@@ -172,22 +161,23 @@ class Arlima_TemplateEngine implements Arlima_TemplateEngineInterface
      * @return Mustache_Template
      */
     protected function loadTemplateObject($template_name) {
-
-        if( in_array($template_name, self::$not_found_templates) ) {
-            return $this->default_tmpl_obj;
-        }
-
-        if( empty(self::$preloaded_templates[$template_name]) ) {
-            if( $template_file = $this->template_path_resolver->find($template_name) ) {
-                self::$preloaded_templates[$template_name] = $this->fileToMustacheTemplate($template_file);
-            } else {
-                // Does not exist
-                self::$not_found_templates[] = $template_name;
+        if ( isset(self::$preloaded_templates[$template_name]) ) {
+            if( self::$preloaded_templates[$template_name] === '' ) {
+                // Don't search for template more than once, we have searched for this template
+                // but it was not found == return default object
                 return $this->default_tmpl_obj;
             }
+            return self::$preloaded_templates[$template_name];
         }
 
-        return self::$preloaded_templates[$template_name];
+        if( $template_file = $this->template_path_resolver->find($template_name) ) {
+            self::$preloaded_templates[$template_name] = $this->fileToMustacheTemplate($template_file);
+            return self::$preloaded_templates[$template_name];
+        }
+
+        // Template file not found, return default
+        self::$preloaded_templates[$template_name] = '';
+        return $this->default_tmpl_obj;
     }
 
 }

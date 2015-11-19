@@ -5,7 +5,6 @@ var ArlimaFileIncludes= (function($, window, ArlimaUtils, ArlimaFormBuilder) {
         $elem : false,
 
         getFormFieldsDefinition : function(file) {
-            file = file.replace('//', '/'); // legacy fix
             return $.extend(true, {}, this.$elem.find('.file-include[data-file="'+file+'"]').get(0).arlimaFormFields);
         },
 
@@ -79,20 +78,6 @@ var ArlimaFileIncludes= (function($, window, ArlimaUtils, ArlimaFormBuilder) {
                         ui.helper.css('z-index', '99999');
                     }
                 });
-            });
-
-            // Make include groups collapsible
-            $elem.find('.include-group thead td').click(function() {
-                var $groupToggler = $(this),
-                    $group = $groupToggler.closest('.include-group');
-
-                if( $group.hasClass('open') ) {
-                    $group.removeClass('open');
-                    $groupToggler.closest('table').find('tbody').hide();
-                } else {
-                    $group.addClass('open');
-                    $groupToggler.closest('table').find('tbody').show();
-                }
             });
         }
 

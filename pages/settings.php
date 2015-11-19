@@ -1,14 +1,14 @@
 <?php
 /**
- * @var Arlima_WP_AbstractAdminPage $this
+ * @var Arlima_AbstractAdminPage $this
  */
 
 $arlima_plugin = $this->getPlugin();
 $settings = $arlima_plugin->loadSettings();
-
+$export_manager = new Arlima_ExportManager($arlima_plugin);
 $import_manager = new Arlima_ImportManager($arlima_plugin);
-$list_repo = new Arlima_ListRepository();
-$sys = Arlima_CMSFacade::load();
+$list_factory = new Arlima_ListFactory();
+$connector = new Arlima_ListConnector();
 
 if( isset($_POST['settings']) ) {
 
@@ -16,18 +16,16 @@ if( isset($_POST['settings']) ) {
     $settings = array_merge($settings, $_POST['settings']);
     if( !isset($_POST['settings']['streamer_colors']) )
         $settings['streamer_colors'] = array();
-
     $arlima_plugin->saveSettings($settings);
 
     // Save approved for export
     $approved = empty($_POST['approved']) ? array() : $_POST['approved'];
-    $settings['available_export'] = $approved;
-    $arlima_plugin->saveSettings($settings);
+    $export_manager->setListsAvailableForExport($approved);
 
     // Remove imported lists
     if( !empty($_POST['remove_imported']) ) {
         foreach($_POST['remove_imported'] as $remove) {
-            $sys->removeImportedList($remove);
+            $import_manager->removeImportedList($remove);
         }
     }
 
@@ -38,9 +36,8 @@ if( isset($_POST['settings']) ) {
 // Create a list of our arlima lists sorted so that those lists
 // approved for export comes first. Also find out from which
 // page the approved lists can be exported
-$export_manager = new Arlima_ExportManager(empty($settings['available_export']) ? array():$settings['available_export']);
 $lists_sorted = array();
-$lists = $list_repo->loadListSlugs();
+$lists = $list_factory->loadListSlugs();
 $has_exportable_list = false;
 foreach($lists as &$list_data) {
     if($export_manager->isAvailableForExport($list_data->id)) {
@@ -49,10 +46,11 @@ foreach($lists as &$list_data) {
         // Monkey patch the list object
         $list_data->approved = true;
         $list_data->export_page = false;
-        $pages = $sys->loadRelatedPages( $list_repo->load($list_data->id) );
+        $connector->setList($list_factory->loadList($list_data->id));
+        $pages = $connector->loadRelatedPages();
 
         if(!empty($pages)) { // monkey patch from which page list can be exported
-            $list_data->export_page = rtrim(get_permalink($pages[0]->ID),'/') .'/'.Arlima_WP_Plugin::EXPORT_FEED_NAME.'/';
+            $list_data->export_page = rtrim(get_permalink($pages[0]->ID),'/') .'/'.Arlima_Plugin::EXPORT_FEED_NAME.'/';
         }
 
         array_unshift($lists_sorted, $list_data);
@@ -64,7 +62,7 @@ foreach($lists as &$list_data) {
 }
 
 /**
- * @param Arlima_WP_Plugin $arlima_plugin
+ * @param Arlima_Plugin $arlima_plugin
  * @param string $setting
  */
 function output_yesorno_select($arlima_plugin, $setting) {
@@ -89,10 +87,6 @@ if( isset($message) ): ?>
 
     <form action="admin.php?page=arlima-settings" method="post">
 
-        <p>
-            <strong>Version: </strong> <?php echo $arlima_plugin->getSetting('install_version') ?>
-        </p>
-
         <div class="arlima-postbox">
             <h3><?php _e('Streamer Colors', 'arlima') ?></h3>
             <div class="inside">
@@ -112,7 +106,7 @@ if( isset($message) ): ?>
             </div>
         </div>
 
-        <?php if( Arlima_WP_Plugin::supportsImageEditor() ): ?>
+        <?php if( Arlima_Plugin::supportsImageEditor() ): ?>
             <div class="arlima-postbox">
                 <h3><?php _e('Image Quality', 'arlima') ?></h3>
                 <div class="inside">
@@ -146,7 +140,7 @@ if( isset($message) ): ?>
                         </td>
                         <td style="width:400px">
                             <input type="hidden" name="type" value="export" />
-                            <div id="export-list" class="scroll-window">
+                            <div id="export-list" style="width: 100%; max-width: none">
                                 <?php $i=0; foreach($lists_sorted as $list_data): $i++; ?>
                                     <p>
                                         <label for="list<?php echo $i; ?>">
@@ -213,16 +207,6 @@ if( isset($message) ): ?>
                         <td>
                             <label>
                                 <?php output_yesorno_select($arlima_plugin, 'editor_sections'); ?>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <?php _e('Restrict access to lists per user', 'arlima') ?>
-                        </td>
-                        <td>
-                            <label>
-                                <?php output_yesorno_select($arlima_plugin, 'limit_access_to_lists'); ?>
                             </label>
                         </td>
                     </tr>

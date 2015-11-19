@@ -5,10 +5,9 @@
  * @package Arlima
  * @since 1.0
  */
-$list_repo = new Arlima_ListRepository();
-$arlima_plugin = new Arlima_WP_Plugin();
+$factory = new Arlima_ListFactory();
+$arlima_plugin = new Arlima_Plugin();
 $settings = $arlima_plugin->loadSettings();
-$cms = Arlima_CMSFacade::load();
 ?>
 <div id="col-container">
 
@@ -21,7 +20,6 @@ $cms = Arlima_CMSFacade::load();
                 <i class="fa fa-eye"></i>
                 <?php _e('Toggle article preview', 'arlima') ?>
             </a>
-            <?php do_action('arlima_admin_main_article_controls'); ?>
             <a href="#" class="save disabled" title="ctrl + s">
                 <i class="fa fa-save"></i>
                 <?php _e('Publish list', 'arlima') ?>
@@ -77,7 +75,7 @@ $cms = Arlima_CMSFacade::load();
                         <input class="data streamer content" data-prop="options:streamerContent" />
                         <input type="hidden" class="data streamer-type" data-prop="options:streamerType" />
                         <select class="streamer-color" name="options:streamerColor">
-                            <?php Arlima_WP_Plugin::loadStreamerColors(); ?>
+                            <?php Arlima_Plugin::loadStreamerColors(); ?>
                         </select>
                     </div>
 
@@ -105,7 +103,7 @@ $cms = Arlima_CMSFacade::load();
 
                     // ARTICLE TEMPLATES
 
-                    $hidden = apply_filters('arlima_hidden_templates', array('file-include'), false);
+                    $hidden = apply_filters('arlima_hidden_templates', array(), false);
                     ?>
                     <select class="data templates" data-prop="options:template" data-label="<?php _e('Template', 'arlima') ?>">
                         <option value=""><?php _e('Default', 'arlima') ?></option>
@@ -208,7 +206,7 @@ $cms = Arlima_CMSFacade::load();
                         <input type="hidden" class="data img-align" data-prop="image:alignment" />
                         <input type="hidden" class="data image-attach" data-prop="image:attachment" />
                     </div>
-                    <div id="arlima-article-attachments" class="fancybox attachments-fancybox" style="width:520px"></div>
+                    <div id="arlima-article-attachments" class="fancybox attachments-fancybox" style="width: 400px"></div>
                 </div>
                 <div id="image-scissors-popup" style="width: 600px; height: 600px; display: none"></div>
 
@@ -239,18 +237,14 @@ $cms = Arlima_CMSFacade::load();
                 </div>
 
                 <div class="connection-container template-feature" data-feature="connection">
-                    <strong>
-                        <?php _e('Connected to', 'arlima') ?>:
-                    </strong>
+                    <?php _e('Connected to', 'arlima') ?>:
                     <input type="hidden" class="data post" data-prop="post" />
                     <input type="hidden" class="data overriding-url" data-prop="options:overridingURL" />
                     <input type="hidden" class="data overriding-url-target" data-prop="options:target" />
                     <a href="#" class="url"></a>
                     <em class="future-notice">(<?php _e('Future post', 'arlima') ?>)</em>
-                    <a href="#" class="change button small button-small">
-                        <i class="fa fa-lg fa-wrench"></i>
-                        <?php _e('Change connection', 'arlima') ?>
-                    </a>
+                    <a href="#" class="change">[<?php _e('change', 'arlima') ?>]</a>
+                    <a href="#" class="wp-admin-edit">[<?php _e('edit', 'arlima') ?>]</a>
                     <?php do_action('arlima_list_manager_article_connection'); ?>
                 </div>
 
@@ -307,8 +301,6 @@ $cms = Arlima_CMSFacade::load();
                 <div class="search-result"></div>
             </div>
         </div>
-
-        <?php do_action('arlima_admin_main_panel_search'); ?>
 
         <div id="arlima-post-search" class="arlima-postbox">
             <div class="collapse-toggle open"><br /></div>
@@ -372,8 +364,6 @@ $cms = Arlima_CMSFacade::load();
             </div>
         </div>
 
-        <?php do_action('arlima_admin_main_panel_presets'); ?>
-
         <div id="arlima-article-presets" class="arlima-postbox">
             <div class="collapse-toggle"><br /></div>
             <h3><span><?php _e('Article presets', 'arlima') ?></span></h3>
@@ -388,8 +378,6 @@ $cms = Arlima_CMSFacade::load();
                 </table>
             </div><!-- .inside -->
         </div><!-- #arlima-custom-templates -->
-
-        <?php do_action('arlima_admin_main_panel_includes'); ?>
 
         <?php
         $file_includes = apply_filters('arlima_article_includes', array(__('Count Down','arlima') => dirname(__FILE__).'/count-down.php'));
@@ -408,85 +396,34 @@ $cms = Arlima_CMSFacade::load();
                     </tr>
                     </thead>
                     <tbody>
-                        <?php
-
-                        // Put includes in groups
-                        $include_groups = array('misc'=>array());
-                        foreach($file_includes as $pos_group_name => $pos_group) {
-                            if( is_array($pos_group) ) {
-                                $include_groups[$pos_group_name] = $pos_group;
-                            } else {
-                                $include_groups['misc'][$pos_group_name] = $pos_group;
-                            }
-                        }
-
-                        // Put includes without a group last
-                        $misc_copy = $include_groups['misc'];
-                        unset($include_groups['misc']);
-                        $include_groups['misc'] = $misc_copy;
-
-                        foreach( $include_groups as $group => $includes ) {
-                            if( $group != 'misc' ): ?>
-                                <tr>
-                                    <td colspan="2" class="include-group">
-                                        <table cellspacing="0">
-                                            <thead>
-                                                <tr>
-                                                    <td>
-                                                        <strong><?php echo $group ?></strong> (<?php echo count($includes) ?>)
-                                                    </td>
-                                                </tr>
-                                            </thead>
-                                            <tbody style="display: none">
-                            <?php endif;
-
-                            foreach( $includes as $label => $file ):
-                                if( is_numeric($label) )
-                                    $label = basename($file);
-                                if( $relative_path = $cms->resolveFilePath($file, true) )
-                                    $file = $relative_path;
-
-                                ?>
-                                <tr>
-                                    <td colspan="2">
-                                        <div class="file-include"
-                                             data-args='<?php
-                                             // Add prop name to key for faster lookups in js
-                                             $args = array();
-                                             foreach($arlima_file_include->getFileArgs($file) as $name => $data) {
-                                                 if( is_numeric($name) ) {
-                                                     $args[$data['property']] = $data;
-                                                 } else {
-                                                     $args[$name] = $data; // Backwards compat
-                                                 }
-                                             }
-                                             echo json_encode($args);
-                                             ?>'
-                                             data-file="<?php echo $file; ?>"
-                                             data-label="<?php echo $label ?>">
-                                            <?php echo $label;  ?>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach;
-
-                            if( $group != 'misc' ): ?>
-                                            </tbody>
-                                        </table>
-                                    </td>
-                                </tr>
-                            <?php endif;
-                        }
-                        ?>
+                        <?php foreach( $file_includes as $label => $file ): if( is_numeric($label) ) $label = basename($file); ?>
+                            <tr>
+                                <td colspan="2">
+                                    <div class="file-include" 
+                                        data-args='<?php
+                                        // Add prop name to key for faster lookups in js
+                                        $args = array();
+                                        foreach($arlima_file_include->getFileArgs($file) as $name => $data) {
+                                            if( is_numeric($name) ) {
+                                                $args[$data['property']] = $data;
+                                            } else {
+                                                $args[$name] = $data; // Backwards compat
+                                            }
+                                        }
+                                        echo json_encode($args);
+                                        ?>'
+                                        data-file="<?php echo $file; ?>"
+                                        data-label="<?php echo $label ?>">
+                                        <?php echo $label; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div><!-- .inside -->
 
-        </div>
-
-        <?php do_action('arlima_admin_main_panel_end'); ?>
-
-        <!-- #arlima-article-functions -->
+        </div><!-- #arlima-article-functions -->
 
     </div><!-- .col-wrap -->
 
@@ -503,21 +440,11 @@ $cms = Arlima_CMSFacade::load();
                     <select>
                         <option value=""><?php _e('Choose article list', 'arlima') ?></option>
                         <?php
-                        $available_lists = $list_repo->loadListSlugs();
-                        if( isset($settings['limit_access_to_lists']) && $settings['limit_access_to_lists'] == true ) {
-                            $allowed_lists = get_user_meta( get_current_user_id(), 'arlima_allowed_lists', true);
-                            if( $allowed_lists == -1 ) $available_lists = array();
-                            if( is_array( $allowed_lists ) ) {
-                                $available_lists = array_filter( $available_lists, function($list) use ($allowed_lists) {
-                                    return in_array($list->id, $allowed_lists);
-                                });
-                            }
-                        }
-                        
-                        foreach($available_lists as $list_data): ?>
+                        $available_lits = $factory->loadListSlugs();
+                        foreach($available_lits as $list_data): ?>
                             <option value="<?php echo $list_data->id; ?>"><?php echo $list_data->title; ?></option>
                         <?php endforeach;
-                        $import_manager = new Arlima_ImportManager();
+                        $import_manager = new Arlima_ImportManager(new Arlima_Plugin());
                         $imported = $import_manager->getImportedLists();
                         if(!empty($imported)): ?>
                             <optgroup label="<?php _e('Imported lists', 'arlima') ?>">
@@ -534,7 +461,7 @@ $cms = Arlima_CMSFacade::load();
                 <div class="list-search">
                     <input type="text" placeholder="<?php _e('Search', 'arlima') ?>..."/>
                     <ul>
-                        <?php foreach($available_lists as $list_data): ?>
+                        <?php foreach($available_lits as $list_data): ?>
                             <li class="list" style="display:none;" data-alid="<?php echo $list_data->id;?>">
                                 <?php echo $list_data->title; ?>
                             </li>

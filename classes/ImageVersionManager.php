@@ -7,7 +7,7 @@
  * @since 2.5.7
  * @requires WP 3.5
  */
-class Arlima_WP_ImageVersionManager
+class Arlima_ImageVersionManager
 {
 
     const META_KEY_VERSIONS = 'arlima-images';
@@ -31,7 +31,7 @@ class Arlima_WP_ImageVersionManager
 
     /**
      * @param int $id
-     * @param Arlima_WP_Plugin|int $plugin_or_img_quality
+     * @param Arlima_Plugin|int $plugin_or_img_quality
      */
     public function __construct($id, $plugin_or_img_quality=100)
     {
@@ -43,7 +43,7 @@ class Arlima_WP_ImageVersionManager
      * @param string $key
      * @return array
      */
-    public static function uploadDirData($key = null)
+    private static function uploadDirData($key = null)
     {
         if( self::$upload_dir_data === null) {
             self::$upload_dir_data = wp_upload_dir();
@@ -62,7 +62,7 @@ class Arlima_WP_ImageVersionManager
      */
     public static function registerFilters()
     {
-        add_action('delete_attachment', 'Arlima_WP_ImageVersionManager::removeVersions');
+        add_action('delete_attachment', 'Arlima_ImageVersionManager::removeVersions');
     }
 
     /**

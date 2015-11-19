@@ -125,7 +125,7 @@ module.exports = function(grunt) {
 
         replaceInFile(config.mainScript, 'Version: '+currentVersion, 'Version: '+newVersion);
         replaceInFile('readme.txt', 'Stable tag: '+currentVersion, 'Stable tag: '+newVersion);
-        replaceInFile('constants.php', "'ARLIMA_PLUGIN_VERSION', '"+currentVersion, "'ARLIMA_PLUGIN_VERSION', '"+newVersion);
+        replaceInFile('constants.php', "'ARLIMA_FILE_VERSION', '"+currentVersion, "'ARLIMA_FILE_VERSION', '"+newVersion);
     });
 
     /*
@@ -134,11 +134,10 @@ module.exports = function(grunt) {
     grunt.registerTask('validate-js', "Check that we're not doing anything wrong in our javascripts", function() {
         for(var x in config.filesToConcat ) {
             Object.keys(config.filesToConcat[x]).every(function(i) {
-                var fileName = config.filesToConcat[x][i],
-                    filePath = __dirname +'/'+ fileName,
-                    code = readFile(filePath);
-                if( fileName != 'js/arlima/dev/ArlimaUtils.js' && code.indexOf('console.') > -1 ) {
-                    throw new Error('Javascript '+fileName+' invoked the console object, you must remove it to build the scripts!');
+                var file = __dirname +'/'+ config.filesToConcat[x][i],
+                    code = readFile(file);
+                if( code.indexOf('console.') > -1 ) {
+                    throw new Error('Javascript '+file+' invoked the console object, you must remove it to build the scripts!');
                 }
                 return true;
             });
@@ -151,45 +150,46 @@ module.exports = function(grunt) {
     grunt.registerTask('build-js', ['validate-js', 'current-version', 'concat', 'uglify', 'change-version']);
 
     /*
-     * Create class documentation
-     */
-    var docsPath = 'classes/docs.md';
-    grunt.registerTask('create-docs', 'Create markdown-formatted class documentation in '+docsPath, function() {
-        var bin = __dirname+'/vendor/victorjonsson/markdowndocs/bin/phpdoc-md',
-            done = this.async();
-
-        exec(bin+' generate --bootstrap=classes/tests/setup.php --ignore=mustache,tests classes > '+docsPath, function(err, stdout, stderr) {
-            if( err || stderr ) {
-                grunt.log.writeln('!! '+(err || stderr));
-                throw new Error('phpdocs-md is missing, please run $ composer update');
-            } else {
-                grunt.log.writeln('* Class docs written to '+docsPath);
-            }
-            done();
-        });
-    });
-
-    /*
      * Run PHP-unit
      */
     grunt.registerTask('phpunit', 'Run phpUnit tests', function() {
 
-        var done = this.async();
+        var finishedTests = 0,
+            numTests = config.phpunit.length,
+            done = this.async();
 
-        exec('phpunit', function(err, stdout, stderr) {
-            if( !handleProcessError(grunt, stderr, err, stdout) ) {
-                if( stdout.indexOf('<span style="') > -1 ) {
-                    // h4ck.. in case of a php-error the output will not be sent
-                    // to stderr...
-                    handleProcessError(grunt, stdout);
-                } else if(stdout.indexOf('PHPUnit') > -1 ) {
-                    grunt.log.writeln('* Successfully ran all unit tests ');
-                    grunt.log.writeln(stdout);
-                } else {
-                    handleProcessError(grunt, 'Unexpected output from phpunit: '+stdout);
+        config.phpunit.every(function(file) {
+            if( file.indexOf('#') !== 0 ) {
+                exec('phpunit  --no-globals-backup '+file, function (error, stdout, stderr) {
+                    if( handleProcessError(grunt, stderr, error, stdout) ) {
+                        done();
+                    } else {
+
+                        if( stdout.indexOf('<span style="') > -1 ) {
+                            // h4ck.. in case of a php-error the output will not be sent
+                            // to stderr...
+                            handleProcessError(grunt, stdout);
+                            done();
+                        } else if(stdout.indexOf('PHPUnit') > -1 ) {
+                            grunt.log.writeln('* Successfully ran php-unit file '+file);
+                        } else {
+                            handleProcessError(grunt, 'Unexpected output from phpunit: '+stdout);
+                            done();
+                        }
+                    }
+
+                    finishedTests++;
+                    if( finishedTests == numTests ) {
+                        done();
+                    }
+                });
+            } else {
+                numTests--;
+                if( finishedTests == numTests ) {
+                    done();
                 }
             }
-            done();
+            return true;
         });
     });
 
@@ -260,7 +260,6 @@ module.exports = function(grunt) {
         'validate-readme',
         'change-version',
         'localization',
-        'create-docs',
         'less',
         'concat',
         'uglify'

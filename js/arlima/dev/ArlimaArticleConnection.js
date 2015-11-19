@@ -30,19 +30,14 @@ var ArlimaArticleConnection = (function($, ArlimaUtils, ArlimaArticleForm, Arlim
             this.article = article;
             this.isPublishedPost = article.isPublished();
 
-            var postIDs = [],
-                collectPostIDs = function(article) {
-                    $.each(article.getChildArticles(), function(i, childArticle) {
-                        collectPostIDs(childArticle);
-                        if( childArticle.data.post )
-                            postIDs.push(childArticle.data.post);
-                    });
-                };
-
+            var postIDs = [];
             if( article.data.post )
                 postIDs.push(article.data.post);
 
-            collectPostIDs(article);
+            $.each(article.getChildArticles(), function(i, childArticle) {
+                if( childArticle.data.post )
+                    postIDs.push(childArticle.data.post);
+            });
 
             if( postIDs.length == 0 || (postIDs.length == 1 && postIDs[0] == 0) ) {
                 this.posts = {};
@@ -88,6 +83,7 @@ var ArlimaArticleConnection = (function($, ArlimaUtils, ArlimaArticleForm, Arlim
                 .text(label);
 
             if( this.currentPost.ID ) {
+                this.$elem.find('.wp-admin-edit').show();
                 this.$fancybox.find('.overriding-url').val('');
                 this.$fancybox.find('.container').hide().filter('.wp-post').show();
                 this.$fancybox.find('.button').removeClass('active').filter('.wp-post-btn').addClass('active');
@@ -137,6 +133,14 @@ var ArlimaArticleConnection = (function($, ArlimaUtils, ArlimaArticleForm, Arlim
                 return false;
             });
 
+            // Edit in wp-admin
+            $container.find('.wp-admin-edit').click(function() {
+                if( ArlimaArticleForm.article || ArlimaArticleForm.article.data.post ) {
+                    window.open('post.php?post=' + ArlimaArticleForm.article.data.post + '&action=edit')
+                }
+                return false;
+            });
+
             // Fancybox buttons
             this.$fancybox.find('.button').click(function() {
                 var $btn = $(this);
@@ -161,14 +165,11 @@ var ArlimaArticleConnection = (function($, ArlimaUtils, ArlimaArticleForm, Arlim
                     if( ArlimaArticleForm.$form.find('input.overriding-url-target').val() != target) {
                         ArlimaArticleForm.change('input.overriding-url-target', target);
                     }
-
                     $('.fancybox-close').trigger('click');
 
                     _this.$elem.find('.url')
                             .attr('href', overridingURL)
                             .text(overridingURL);
-
-                    _this.setupLinks();
 
                 } else if( $btn.hasClass('search-btn') ) {
 
@@ -213,8 +214,9 @@ var ArlimaArticleConnection = (function($, ArlimaUtils, ArlimaArticleForm, Arlim
                                 } else {
                                     _this.$futureNotice.show();
                                 }
-                                _this.setupLinks();
+
                                 $document.trigger('postLoaded', [_this.posts]);
+
                                 $('.fancybox-close').trigger('click');
                                 return false;
                             });
@@ -237,7 +239,9 @@ var ArlimaArticleConnection = (function($, ArlimaUtils, ArlimaArticleForm, Arlim
             });
 
         }
+
     };
+
 
     var _hasAllPostsLoaded = function(postIDs) {
         var found = true;

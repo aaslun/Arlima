@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/setup.php';
 require_once __DIR__ . '/ExportImportBase.php';
 
 
@@ -16,9 +17,10 @@ class TestArlimaImport extends ExportImportBase {
     private static $importer;
 
     function setUp() {
-        self::$exporter = new Arlima_ExportManager();
-        self::$importer = new Arlima_ImportManager();
+        self::$exporter = new Arlima_ExportManager(new Private_ArlimaPluginDummy());
+        self::$importer = new Arlima_ImportManager(new Private_ArlimaPluginDummy());
     }
+
 
     private function generateServerResponse($body, $content_type, $code = 200)  {
         return array(
@@ -33,15 +35,11 @@ class TestArlimaImport extends ExportImportBase {
         $now = time();
         $list = $this->createList();
         $list->setCreated($now);
-
-       # var_dump($list->toArray());
-
         $json = self::$exporter->convertList($list, Arlima_ExportManager::FORMAT_JSON);
+
         $server_response = $this->generateServerResponse($json, 'application/json');
-
-#        echo PHP_EOL .' ---- '.PHP_EOL;
-
         $imported = self::$importer->serverResponseToArlimaList($server_response, 'http://google.se/export/');
+
 
         $this->assertTrue( $imported->exists() );
         $this->assertTrue( $imported->isImported() );
@@ -56,7 +54,7 @@ class TestArlimaImport extends ExportImportBase {
         $this->assertEquals($article['options']['overridingURL'], get_permalink(self::$some_post_id));
     }
 
-    function ssssstestImportRSS() {
+    function testImportRSS() {
 
         $now = time();
         $list = $this->createList();

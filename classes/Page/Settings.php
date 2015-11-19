@@ -5,7 +5,7 @@
  * @since 2.7
  * @package Arlima
  */
-class Arlima_WP_Page_Settings extends Arlima_WP_AbstractAdminPage {
+class Arlima_Page_Settings extends Arlima_AbstractAdminPage {
 
     const PAGE_SLUG = 'arlima-settings';
 

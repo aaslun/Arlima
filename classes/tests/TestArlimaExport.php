@@ -1,10 +1,14 @@
 <?php
 
+require_once __DIR__ . '/setup.php';
+require_once __DIR__ . '/ExportImportBase.php';
+
 
 /**
  * @todo: Test that you can set lists as exportable
  */
 class TestArlimaExport extends ExportImportBase {
+
 
     /**
      * @var Arlima_ExportManager
@@ -12,8 +16,9 @@ class TestArlimaExport extends ExportImportBase {
     private static $exporter;
 
     function setUp() {
-        self::$exporter = new Arlima_ExportManager();
+        self::$exporter = new Arlima_ExportManager(new Private_ArlimaPluginDummy());
     }
+
 
     function testExportRSS() {
 
@@ -27,7 +32,7 @@ class TestArlimaExport extends ExportImportBase {
         $xml = simplexml_load_string($rss);
 
         $this->assertEquals('Title', (string)$xml->channel->title);
-        $this->assertEquals('Arlima v'.ARLIMA_PLUGIN_VERSION.' (wordpress plugin)', (string)$xml->channel->generator);
+        $this->assertEquals('Arlima v'.Arlima_Plugin::VERSION.' (wordpress plugin)', (string)$xml->channel->generator);
         $this->assertEquals($now, strtotime( (string)$xml->channel->pubDate));
         $this->assertTrue( !empty($xml->channel->link) );
         $this->assertTrue( is_numeric( strtotime( (string)$xml->channel->lastBuildDate) ) );
@@ -43,6 +48,7 @@ class TestArlimaExport extends ExportImportBase {
         $list = $this->createList();
         $list->setCreated($now);
         $json = self::$exporter->convertList($list, Arlima_ExportManager::FORMAT_JSON);
+
 
         $json_data = json_decode($json, true);
         $this->assertEquals(1, count($json_data['articles']));

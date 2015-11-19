@@ -35,7 +35,6 @@ var ArlimaImageManager = (function($, window, ArlimaArticleForm, ArlimaTemplateL
             } else if( size != 'full' && alignment == '') {
                 alignment = 'alignleft';
             }
-
              _this.article.data.image = {
                 size : size,
                 url : url,
@@ -73,8 +72,7 @@ var ArlimaImageManager = (function($, window, ArlimaArticleForm, ArlimaTemplateL
             // Browser media library
             this.$buttons.filter('.browse').click(function() {
 
-                var postID = _this.article ? parseInt(_this.article.data.post, 10) : null;
-
+                var postID = _this.article ? _this.article.data.post : null;
                 // If the media frame already exists, reopen it.
                 if ( window.wpMediaModal ) {
                     window.wpMediaModal.uploader.uploader.param( 'post_id', postID );
@@ -172,7 +170,6 @@ var ArlimaImageManager = (function($, window, ArlimaArticleForm, ArlimaTemplateL
             var $img = $('<img src="'+_this.article.data.image.url+'" />');
             $img.load(function() {
                 $(window).trigger('arlimaFormImageLoaded');
-                _makeImageElemDroppable(this);
             });
             _this.$imageWrapper
                 .html($img)
@@ -231,17 +228,13 @@ var ArlimaImageManager = (function($, window, ArlimaArticleForm, ArlimaTemplateL
         return 'full';
     },
 
-    _makeImageElemDroppable = function(img) {
-        window.ArlimaImageUploader.createDropZone(img);
-    },
-
     _setupForm = function() {
         try {
 
             if( _this.article.data.image && _this.article.data.image.url ) {
                 var img = _this.article.data.image; // shorten code pls...
 
-                window.ArlimaUtils.log('Setting up image form for '+_this.article.data.id);
+                ArlimaUtils.log('Setting up image form for '+_this.article.data.id);
 
                 // toggle visibility
                 _toggleImageDisplay(true);
@@ -300,7 +293,7 @@ var ArlimaImageManager = (function($, window, ArlimaArticleForm, ArlimaTemplateL
                 }
                 ArlimaUtils.selectVal(_this.$sizeSelect, img.size, false);
 
-                // Disable alignment options on full articles (need to be done twice)
+                // Disable alignment options on full articles
                 _setAlignmentButtons();
 
             } else {

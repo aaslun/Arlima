@@ -3,14 +3,14 @@
 
 /**
  * Utility class for the Arlima plugin.
- *
- * @deprecated Use Arlima_WP_Plugin instead
- * @see Arlima_WP_Plugin
- *
  * @package Arlima
  * @since 1.0
  */
-class Arlima_Plugin extends Arlima_WP_Plugin {
+class Arlima_Plugin
+{
+    const VERSION = 3.1;
+    const EXPORT_FEED_NAME = 'arlima-export';
+    const PLUGIN_SETTINGS_OPT = 'arlima_plugin_settings';
 
     private static $is_scissors_installed = null;
 
@@ -983,12 +983,6 @@ class Arlima_Plugin extends Arlima_WP_Plugin {
             $version = $list->getVersion();
             $list_factory->saveNewListVersion($list, $list->getArticles(), $version['user_id'], 0); // Publish the list as a new version
         }
-    }
-
-    public function __construct()
-    {
-        Arlima_Utils::warnAboutDeprecation(__METHOD__, 'Arlima_WP_Plugin::__construct');
-        parent::__construct();
     }
 
 }

@@ -5,7 +5,7 @@
  * @since 2.7
  * @package Arlima
  */
-class Arlima_WP_Page_Main extends Arlima_WP_AbstractAdminPage {
+class Arlima_Page_Main extends Arlima_AbstractAdminPage {
 
     const PAGE_SLUG = 'arlima-main';
 
@@ -27,20 +27,12 @@ class Arlima_WP_Page_Main extends Arlima_WP_AbstractAdminPage {
             $scripts = $this->addDevScripts($scripts);
         }
 
-        if( Arlima_WP_Plugin::supportsImageEditor() ) {
+        if( Arlima_Plugin::supportsImageEditor() ) {
             // these files could not be enqueue´d until wp version 3.5
-            global $wp_version;
-            if( (int)$wp_version < 4 ) {
-                $wp_inc_url = includes_url() .'/js/jquery/ui/';
-                $scripts['jquery-ui-effects'] = $wp_inc_url .'jquery.ui.effect.min.js';
-                $scripts['jquery-ui-effects-shake'] = $wp_inc_url .'jquery.ui.effect-shake.min.js';
-                $scripts['jquery-ui-effects-highlight'] = $wp_inc_url .'jquery.ui.effect-highlight.min.js';
-            } else {
-                $wp_inc_url = includes_url() .'js/jquery/ui/';
-                $scripts['jquery-ui-effects'] = $wp_inc_url .'effect.min.js';
-                $scripts['jquery-ui-effects-shake'] = $wp_inc_url .'effect-shake.min.js';
-                $scripts['jquery-ui-effects-highlight'] = $wp_inc_url .'effect-highlight.min.js';
-            }
+            $wp_inc_url = includes_url() .'/js/jquery/ui/';
+            $scripts['jquery-ui-effects'] = $wp_inc_url .'effect.min.js';
+            $scripts['jquery-ui-effects-shake'] = $wp_inc_url .'effect-shake.min.js';
+            $scripts['jquery-ui-effects-highlight'] = $wp_inc_url .'effect-highlight.min.js';
         }
 
         $scripts_to_enqueue = array();
@@ -125,7 +117,7 @@ class Arlima_WP_Page_Main extends Arlima_WP_AbstractAdminPage {
     function enqueueScripts()
     {
         // Enqueue scissors scripts if installed
-        if ( Arlima_WP_Plugin::isScissorsInstalled() ) {
+        if ( Arlima_Plugin::isScissorsInstalled() ) {
 
             $scissors_url = WP_PLUGIN_URL . '/scissors-continued';
             wp_enqueue_script('scissors_crop', $scissors_url . '/js/jquery.Jcrop.js', array('jquery'));
@@ -150,10 +142,10 @@ class Arlima_WP_Page_Main extends Arlima_WP_AbstractAdminPage {
         if ( !function_exists('tdav_css') ) {
             function tdav_css($wp)
             {
-                $arlima_plugin = new Arlima_WP_Plugin();
+                $arlima_plugin = new Arlima_Plugin();
                 $styles = $arlima_plugin->getTemplateStylesheets();
                 if( empty($styles) ) {
-                    $wp .= ',' . Arlima_WP_Plugin::getTemplateCSS();
+                    $wp .= ',' . Arlima_Plugin::getTemplateCSS();
                 } else {
                     $wp .= ','.$styles[0];
                 }
@@ -199,7 +191,7 @@ class Arlima_WP_Page_Main extends Arlima_WP_AbstractAdminPage {
         $style_sheets = $this->plugin->getTemplateStylesheets();
         ?>
         <script>
-            ArlimaArticle.defaultData = <?php echo json_encode(Arlima_ListVersionRepository::createArticle()) ?>;
+            ArlimaArticle.defaultData = <?php echo json_encode(Arlima_ListFactory::createArticleDataArray()) ?>;
             ArlimaUtils.serverTime = <?php echo Arlima_Utils::timeStamp() * 1000; ?>;
             (function(win) {
                 var tmpls = [];

@@ -16,9 +16,6 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
             $articles = this.$elem.find('.articles');
 
         this.$elem
-            .on('mousedown', function() {
-                window.ArlimaListContainer.focus(_self);
-            })
             .resizable({
                 containment: 'parent',
                 start : function() {
@@ -54,7 +51,6 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
                 _self.$elem.find('.article .remove').remove();
                 _self.$elem.find('.footer .save').remove();
                 _self.$elem.find('.footer .preview').remove();
-                _self.$elem.find('.header').attr('title', data.id);
             }, 50);
 
             var reloadInterval = setInterval(function() {
@@ -81,7 +77,6 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
     }
 
     /**
-     * Compiles list of articles and corresponding data from DOM
      * @returns {String}
      */
     ArlimaList.prototype.toString = function() {
@@ -108,33 +103,14 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
      * @return {Array}
      */
     ArlimaList.prototype.getArticleData = function() {
-        var articles = [],
-            all_articles = [],
-            childeIndex = -1,
-            inlineWith = false;
-
+        var articles = [];
         this.$elem.find('.article').each(function() {
-
-            this.arlimaArticle.data.children = []; // will become populated by this loop
-            this.arlimaArticle.data.options.floating = false;
-
             if( this.arlimaArticle.isChild() ) {
-                childeIndex++;
-                var parent = all_articles[parseInt(this.arlimaArticle.data.parent, 10)];
-                if (parent.parent != -1) { // third level: set floating on children and parent, and merge levels
-                    parent.options.floating = true;
-                    this.arlimaArticle.data.options.floating = true;
-                    this.arlimaArticle.data.options.inlineWithChild = inlineWith;
-                    all_articles[parent.parent].children.push(this.arlimaArticle.data);
-                } else {
-                    inlineWith = childeIndex; // Will be captured by next floating child
-                    parent.children.push(this.arlimaArticle.data);
-                }
+                articles[parseInt(this.arlimaArticle.data.parent, 10)].children.push(this.arlimaArticle.data);
             } else {
-                childeIndex = -1;
+                this.arlimaArticle.data.children = []; // will become populated by this iteration
                 articles.push(this.arlimaArticle.data);
             }
-            all_articles.push(this.arlimaArticle.data);
         });
         return articles;
     };
@@ -155,35 +131,6 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
     };
 
     /**
-     * Goes through all wrapped children and updates their first/last class
-     */
-    ArlimaList.prototype.updateSecondLevelArticleClasses = function() {
-        this.$elem.find('.list-item-depth-1').each(function(){
-            var cur = this,
-                $prev = false,
-                found = false;
-
-            while (cur = $(cur).next()) {
-                var $current = $(cur);
-                if ( $current.hasClass('list-item-depth-2') ) {
-                    if( !found ) {
-                        $(cur).addClass('first').removeClass('last');
-                        found = true;
-                    } else {
-                        $current.removeClass('first').removeClass('last');
-                    }
-                    $prev = $current;
-                } else {
-                    if( $prev ) {
-                        $prev.addClass('last');
-                    }
-                    break;
-                }
-            }
-        });
-    };
-
-    /**
      * @param {Array} articles
      */
     ArlimaList.prototype.setArticles = function(articles) {
@@ -191,127 +138,15 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
         var _self = this,
             addRemoveButton = !this.data.isImported;
 
-        var previousWasFloating;
-
         $.each(articles, function(i , articleData) {
-
             _self.addArticle(new ArlimaArticle(articleData, _self.data.id, false, addRemoveButton), false);
-            previousWasFloating = false;
             if( articleData.children.length > 0 ) {
                 $.each(articleData.children, function(j, childArticleData) {
                     var childArticle = new ArlimaArticle(childArticleData, _self.data.id, false, addRemoveButton);
-
-                    if ( childArticleData.options.floating && previousWasFloating &&  childArticleData.options.inlineWithChild !== undefined ) { // not first
-                        childArticle.$elem.addClass('list-item-depth-2');
-                    }
-                    else {
-                        childArticle.$elem.addClass('list-item-depth-1');
-                    }
-                    previousWasFloating = childArticleData.options.floating;
+                    childArticle.$elem.addClass('list-item-depth-1');
                     _self.addArticle(childArticle, false);
                 });
             }
-        });
-
-        this.updateParentProperties(); // may be changed by floatings
-    };
-
-    /**
-     *
-     */
-    ArlimaList.prototype.makeFloatedChildrenCollapsible = function() {
-
-        var _this = this;
-        ArlimaUtils.log('Making floated children collapsible for '+this.data.id);
-        $('.child-toggler, .article-children', this.$elem).remove();
-
-        $('.list-item-depth-1', this.$elem).each(function() {
-            var children = [],
-                cur = this;
-
-            delete this.arlimaArticle.data.options.inlineWithChild; // in case it was a child
-
-            while (cur = $(cur).next()) {
-                if ($(cur).hasClass('list-item-depth-2')) {
-                    children.push(cur[0]);
-                } else {
-                    break;
-                }
-            }
-
-            if (!children.length) {
-                $(this)
-                    .removeClass('contains-toggled-children')
-                    .removeClass('toggled-children');
-                return;
-            }
-
-            var $parent = $(this),
-                title = $('.article-title', $parent),
-                $container = $('<div class="article-children" />').insertAfter(title),
-                width = parseInt(100 / (children.length + 1), 10),// Add one for parent
-                spanWidth = 0,
-                addChildToContainer = function($elem, i) {
-                    var $span = $('<span class="child" />').appendTo($container);
-                    $span[0].arlimaArticle = $elem.arlimaArticle;
-                    $span.text($('.article-title', $elem).text());
-                    $span.attr('title', $span.text());
-                    $span.css('width', width + '%');
-                    $span.css('left', (width * i) + '%');
-                    return $span;
-                };
-
-
-            $parent.addClass('contains-toggled-children');
-            addChildToContainer($parent, 0);
-
-            $(children)
-                .removeClass('last')
-                .removeClass('first')
-                .each(function(i, child) {
-                    var $span = addChildToContainer(this, i+1);
-                    if( ArlimaArticleForm.isEditing($span) ) {
-                        $span[0].arlimaArticle.setState('editing'); // re-set state so child will appear edited
-                    }
-
-                    $(this).hide();
-                    if( i == (children.length-1) ) {
-                        $(child).addClass('last');
-                        spanWidth = $span.outerWidth();
-                       // togglerPos = ($span.outerWidth() * (children.length+1)) - 16;
-                    }
-                    if( i == 0 ) {
-                        $(child).addClass('first');
-                    }
-                    $span.click(function(ev) {
-                        ev.target = child;
-                        $(child).trigger(ev);
-                        return false;
-                    })
-                });
-
-            var $toggler = $('<span class="child-toggler">&#9660;</span>')
-                                .css('left','calc('+(spanWidth * (children.length+1))+' - 16px)')
-                                .insertAfter($container);
-
-            $toggler.click(function(ev) {
-                $parent.toggleClass('toggled-children');
-                $(children).toggle();
-                $container.toggle();
-                if ($parent.hasClass('toggled-children')) {
-                    $(this).html('&#9650;').addClass('open');
-                } else {
-                    $(this).html('&#9660;').removeClass('open');
-                    _this.makeFloatedChildrenCollapsible();
-                }
-                return false;
-            });
-
-            if ($parent.hasClass('toggled-children')) {
-                $parent.removeClass('toggled-children');
-                $toggler.triggerHandler('click');
-            }
-
         });
     };
 
@@ -348,6 +183,14 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
             $titleNode.text(title);
         }
 
+        $titleNode.find('.schedule-clock').remove();
+        $titleNode.removeClass('scheduled');
+
+        if (data.version.status == 3) {
+            $('<i class="fa fa-clock-o schedule-clock">&nbsp;</i>').prependTo($titleNode);
+            $titleNode.addClass('scheduled');
+        }
+
         if( (ArlimaJS.isAdmin || ArlimaJS.allowEditorsCreateSections) && data.options.supports_sections && !data.isImported ) {
             this.$elem.find('.add-section').show();
         } else {
@@ -363,7 +206,6 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
     ArlimaList.prototype.toggleUnsavedState = function(isUnsaved) {
         isUnsaved = isUnsaved === true; // typecast
         if(isUnsaved != this._isUnsaved) { // state changed
-
             this._isUnsaved = isUnsaved;
             var $title = this.$elem.find('.header .title'),
                     $saveFutureSelectOption = this.$elem.find('.previous-versions li.future');
@@ -371,13 +213,13 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
 
             if(this._isUnsaved) {
                 this.$elem.addClass('unsaved');
-                $title.prepend('<span class="dot pulse">&nbsp;</span>');
-                this.$elem.find('.previous-versions .future.save').removeClass('disabled');
+                $title.prepend('<span class="dot">&nbsp;</span>');
+                this.$elem.find('.previous-versions .future.save').removeClass('disabled')
                 this.displayTitleMessage(false);
             }
             else {
                 this.$elem.removeClass('unsaved');
-                this.$elem.find('.previous-versions .future.save').addClass('disabled');
+                this.$elem.find('.previous-versions .future.save').addClass('disabled')
             }
         }
     };
@@ -439,8 +281,6 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
         window.ArlimaListLoader.load(this, function() {
             _toggleAjaxPreloader(_self, false);
 
-            _self.makeFloatedChildrenCollapsible();
-
             if (_self.data.version.status == 3) { // editing scheduled
                 isChanged = false;
                 _self._hasLoadedScheduledVersion = true;
@@ -449,7 +289,7 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
                 _self._hasLoadedScheduledVersion = false;
             }
 
-            if ( !_self.data.versions[0] || _self.loadedVersion == _self.data.versions[0].id) { // changed to latest version
+            if (_self.loadedVersion == _self.data.versions[0].id) { // changed to latest version
                 isChanged = false;
             }
 
@@ -579,29 +419,17 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
      * of the child articles
      */
     ArlimaList.prototype.updateParentProperties = function() {
-
-        var lastLevelParent = [-1, -1, -1, -1, -1];
-
-        this.$elem.find('.article').each(function(index) {
-            var level;
-            try {
-                level = parseInt(this.className.match(/list-item-depth-(\d+)/)[1], 10);
-            } catch (e) {
-                level = 0;
-            }
-
-            lastLevelParent[level] = index;
-
-            if( level > 0 ) {
-                this.arlimaArticle.data.parent = lastLevelParent[level - 1];
+        var parentIndex = -1;
+        this.$elem.find('.article').each(function() {
+            var $article = $(this);
+            if( $article.hasClass('list-item-depth-1') ) {
+                this.arlimaArticle.data.parent = parentIndex;
             } else {
                 this.arlimaArticle.data.parent = '-1';
+                parentIndex++;
             }
-
             this.arlimaArticle.children = [];
         });
-
-        this.updateSecondLevelArticleClasses();
     };
 
     /* * * * *  Private methods * * * * */
@@ -618,7 +446,11 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
             var $versionWrapper = list.$elem.find('.version .number'),
                 $versionList = list.$elem.find('.previous-versions'),
                 loadedVersionID = list.loadedVersion || list.data.version.id,
-                listContainsSchedule = list.data.scheduledVersions.length > 0;
+                listContainsSchedule = list.data.scheduledVersions.length > 0,
+                $imgClockIcon = $('<i>&nbsp;</i>')
+                        .attr('class', 'fa fa-clock-o schedule-clock')
+                        .attr('title', ArlimaJS.lang.scheduledVersions)
+                        .attr('alt', ArlimaJS.lang.scheduledVersions);
 
             $versionWrapper
                 .html('v. '+loadedVersionID)
@@ -632,15 +464,14 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
                     style: window.qtipStyle
                 });
 
-            if( list.data.version.status == 3 ) {
-                _displayListAsScheduled(list);
-            } else {
-                list.$elem.removeClass('scheduled');
-                list.$elem.
-                    find('.header .title')
-                        .removeClass('scheduled')
-                        .find('.schedule-clock')
-                            .remove();
+            list.$elem.removeClass('scheduled');
+
+            // Does list contain scheduled versions?
+            if(listContainsSchedule) {
+                $versionWrapper.prepend($imgClockIcon);
+                if (list.data.version.status == 3) {  // Scheduled
+                    list.$elem.addClass('scheduled');
+                }
             }
 
             $versionList.html('');
@@ -711,23 +542,15 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
 
             $.each(list.data.versions, function(i, version ) {
                 var $item = $('<li></li>')
-                                .attr('data-version', version.id)
-                                .addClass(version.id == loadedVersionID ? 'selected' : '')
-                                .text('#' + version.id + ' (' + version.saved_by + ')');
-
+                .attr('data-version', version.id)
+                .addClass(version.id == loadedVersionID ? 'selected' : '')
+                .text('#' + version.id + ' (' + version.saved_by + ')');
                 $versionList.append($item);
 
                 // editing scheduled state. only display latest published version
                 // so that list.data.version don't have to be updated for different states
-                if (list.data.version.status == 3) {
-                    if( i > 0 ) {
-                        $item.addClass('disabled');
-                    } else {
-                        $item.click(function(evt) {
-                            list.reload();
-                            return false;
-                        });
-                    }
+                if (list.data.version.status == 3 && i > 0) {
+                    $item.addClass('disabled');
                 }
             });
         }
@@ -745,29 +568,6 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
     };
 
     /**
-     * @param {ArlimaList} list
-     * @param [$titleNode]
-     * @private
-     */
-    var _displayListAsScheduled = function(list, $titleNode) {
-        if( !$titleNode )
-            $titleNode = list.$elem.find('.header .title');
-
-        $titleNode
-            .addClass('scheduled')
-            .find('i')
-                .remove();
-
-        $('<i>&nbsp;</i>')
-            .attr('class', 'fa fa-clock-o schedule-clock')
-            .attr('title', ArlimaJS.lang.scheduledVersions)
-            .attr('alt', ArlimaJS.lang.scheduledVersions)
-            .prependTo($titleNode);
-
-        list.$elem.addClass('scheduled');
-    };
-
-    /**
      * @param data
      * @private
      */
@@ -778,7 +578,7 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
                     '<a href="#" class="remove">&times;</a>'+
                     '<a href="#" class="add-section">+</a>'+
                     '<span class="title"></span>'+
-                    '<span class="schedule-notice notice"></span>'+
+                    '<span class="schedule-notice arlima-notice"></span>'+
                 '</span>' +
             '</div>' +
             '<div class="articles"></div>'+
@@ -805,19 +605,16 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
      * @param {ArlimaList} list
      * @private
      */
-    var _reloadListIfConfirmed = function(list, evt, version) {
+    var _addEventListeners = function(list) {
+
+        list.$elem.find('.refresh').click(function(evt) {
             var doReload = true;
             if( list.hasUnsavedChanges() && !ArlimaUtils.hasMetaKeyPressed(evt) ) {
                 doReload = confirm(ArlimaJS.lang.hasUnsavedChanges);
             }
             if( doReload ) {
-                list.reload(version);
+                list.reload();
             }
-        },
-        _addEventListeners = function(list) {
-
-        list.$elem.find('.refresh').click(function(evt) {
-            _reloadListIfConfirmed(list, evt);
             return false;
         });
 
@@ -882,7 +679,7 @@ var ArlimaList = (function($, window, ArlimaJS, ArlimaBackend, ArlimaUtils) {
                 })
                 .bind('click', function(e) {
                     if( ! $(e.target).is('.future, .disabled, .schedule')) {
-                        _reloadListIfConfirmed(list, e, $(e.target).attr('data-version'));
+                        list.reload($(e.target).attr('data-version'));
                     }
                 });
 
